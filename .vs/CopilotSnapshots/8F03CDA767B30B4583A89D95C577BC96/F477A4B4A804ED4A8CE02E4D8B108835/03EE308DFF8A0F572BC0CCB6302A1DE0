@@ -1,0 +1,193 @@
+﻿using Newtonsoft.Json;
+using RoutingServiceREST.ProxyRef;  // Connected Service → ProxyCacheService
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
+using System.ServiceModel.Web;
+using static RoutingServiceREST.ItineraryResponse;
+using RoutingServiceREST.Services;
+
+namespace RoutingServiceREST
+{
+    public class RoutingService : IRoutingServiceREST
+    {
+        // Default constructor for production usage
+        public RoutingService() { }
+
+        // For tests / DI
+        public RoutingService(ProxyRef.ProxyServiceClient proxy) => _proxy = proxy;
+
+        private readonly ProxyRef.ProxyServiceClient _proxy = null;
+
+        private static void AllowCors()
+        {
+            var r = WebOperationContext.Current?.OutgoingResponse;
+            if (r == null) return;
+            r.Headers.Add("Access-Control-Allow-Origin", "*");
+            r.Headers.Add("Access-Control-Allow-Headers", "content-type");
+            r.Headers.Add("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+        }
+
+        // Public API: thin coordinator that delegates heavy work to the helper internals
+        public ItineraryResponse GetItinerary(ItineraryRequest request)
+        {
+            AllowCors();
+            if (request == null || string.IsNullOrWhiteSpace(request.Origin) || string.IsNullOrWhiteSpace(request.Destination))
+                return Fail("Origin/Destination is missing.");
+
+            try
+            {
+                using (var proxy = _proxy ?? new ProxyServiceClient())
+                {
+                    // Geocode if needed
+                    if (request.OriginLat == 0 && request.OriginLon == 0)
+                    {
+                        if (!TryGeocode(request.Origin, proxy, out var olat, out var olon))
+                            return Fail("Could not geocode Origin address.");
+                        request.OriginLat = olat; request.OriginLon = olon;
+                    }
+                    if (request.DestLat == 0 && request.DestLon == 0)
+                    {
+                        if (!TryGeocode(request.Destination, proxy, out var dlat, out var dlon))
+                            return Fail("Could not geocode Destination address.");
+                        request.DestLat = dlat; request.DestLon = dlon;
+                    }
+
+                    // Load stations and delegate planning
+                    var stationProvider = new ProxyStationProvider(proxy);
+                    var allStations = stationProvider.LoadAllStations();
+
+                    var planner = new RoutePlanner();
+                    return planner.PlanBest(request, allStations, proxy);
+                }
+            }
+            catch (Exception ex)
+            {
+                return Fail($"Error: {ex.Message}");
+            }
+        }
+
+        public void Options() => AllowCors();
+        public string Ping() { AllowCors(); return "pong"; }
+
+        public List<JcDecauxContract> GetContracts()
+        {
+            AllowCors();
+            using (var proxy = new ProxyRef.ProxyServiceClient())
+            {
+                string url = "https://api.jcdecaux.com/vls/v3/contracts";
+                string json = proxy.GetWithTtl(url, 3600, false, false);
+                var trimmed = json?.TrimStart() ?? "";
+
+                if (string.IsNullOrEmpty(trimmed))
+                    throw new Exception("JCDecaux empty response.");
+
+                if (trimmed.StartsWith("<") || trimmed.StartsWith("("))
+                    throw new Exception("JCDecaux non-JSON: " + trimmed.Substring(0, Math.Min(200, trimmed.Length)));
+
+                try
+                {
+                    var contracts = JsonConvert.DeserializeObject<List<JcDecauxContract>>(json) ?? new List<JcDecauxContract>();
+                    foreach (var c in contracts) if (c.Cities == null) c.Cities = new List<string>();
+                    return contracts;
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception("Parse error (contracts): " + ex.Message);
+                }
+            }
+        }
+
+        public List<JcdecauxStation> GetStations(string contract)
+        {
+            AllowCors();
+            using (var proxy = new ProxyRef.ProxyServiceClient())
+            {
+                string baseUrl = "https://api.jcdecaux.com/vls/v3/stations";
+                string url = string.IsNullOrWhiteSpace(contract) ? $"{baseUrl}" : $"{baseUrl}?contract={Uri.EscapeDataString(contract)}";
+
+                string json = proxy.GetWithTtl(url, 60, false, false);
+                var trimmed = json?.TrimStart() ?? "";
+
+                if (string.IsNullOrEmpty(trimmed)) throw new Exception("JCDecaux empty response.");
+                if (trimmed.StartsWith("<") || trimmed.StartsWith("(")) throw new Exception("JCDecaux non-JSON: " + trimmed.Substring(0, Math.Min(200, trimmed.Length)));
+
+                try { return JsonConvert.DeserializeObject<List<JcdecauxStation>>(json); }
+                catch (Exception ex) { throw new Exception("Parse error (stations): " + ex.Message); }
+            }
+        }
+
+        private static ItineraryResponse Fail(string msg) => new ItineraryResponse { Success = false, Message = msg, Instructions = Array.Empty<string>() };
+
+        // --- INTERNAL / REFACTORED HELPERS (kept as static to minimize changes) ---
+        // These mirror the original code but are callable from the new planner/provider classes.
+
+        public static JcdecauxStation FindClosestStationInternal(List<JcdecauxStation> stations, double lat, double lon)
+        {
+            return stations.OrderBy(s => HaversineKm(lat, lon, s.Position.Lat, s.Position.Lon)).FirstOrDefault();
+        }
+
+        public static ItineraryResponse PlanIntercityBikeAtOriginInternal(ItineraryRequest req, string originContract, List<JcdecauxStation> allStations, ProxyRef.ProxyServiceClient proxy)
+        {
+            var service = new RoutingService(proxy);
+            return service.PlanIntercityBikeAtOrigin(req, originContract, allStations, proxy);
+        }
+
+        public static ItineraryResponse PlanIntercityBikeAtDestinationInternal(ItineraryRequest req, string destContract, List<JcdecauxStation> allStations, ProxyRef.ProxyServiceClient proxy)
+        {
+            var service = new RoutingService(proxy);
+            return service.PlanIntercityBikeAtDestination(req, destContract, allStations, proxy);
+        }
+
+        public static ItineraryResponse PlanIntercityBikeBothEndsInternal(ItineraryRequest req, string originContract, string destContract, List<JcdecauxStation> allStations, ProxyRef.ProxyServiceClient proxy)
+        {
+            var service = new RoutingService(proxy);
+            return service.PlanIntercityBikeBothEnds(req, originContract, destContract, allStations, proxy);
+        }
+
+        public static OrsRoute GetORSRouteInternal(string profile, double startLon, double startLat, double endLon, double endLat, ProxyRef.ProxyServiceClient proxy)
+        {
+            var service = new RoutingService(proxy);
+            return service.GetORSRoute(profile, startLon, startLat, endLon, endLat, proxy);
+        }
+
+        public static ItineraryResponse BuildWalkOnlyPlanInternal(ItineraryRequest req, ProxyRef.ProxyServiceClient proxy, string reason)
+        {
+            var service = new RoutingService(proxy);
+            return service.BuildWalkOnlyPlan(req, proxy, reason);
+        }
+
+        // Public wrappers for planner to call instance helpers
+        public static OrsRoute GetORSRouteInternalWrapper(string profile, double startLon, double startLat, double endLon, double endLat, ProxyRef.ProxyServiceClient proxy)
+        {
+            var service = new RoutingService(proxy);
+            return service.GetORSRoute(profile, startLon, startLat, endLon, endLat, proxy);
+        }
+
+        public static ItineraryResponse PlanIntercityBikeAtOriginInternalWrapper(ItineraryRequest req, string originContract, List<JcdecauxStation> allStations, ProxyRef.ProxyServiceClient proxy)
+        {
+            var service = new RoutingService(proxy);
+            return service.PlanIntercityBikeAtOrigin(req, originContract, allStations, proxy);
+        }
+
+        public static ItineraryResponse PlanIntercityBikeAtDestinationInternalWrapper(ItineraryRequest req, string destContract, List<JcdecauxStation> allStations, ProxyRef.ProxyServiceClient proxy)
+        {
+            var service = new RoutingService(proxy);
+            return service.PlanIntercityBikeAtDestination(req, destContract, allStations, proxy);
+        }
+
+        public static ItineraryResponse PlanIntercityBikeBothEndsInternalWrapper(ItineraryRequest req, string originContract, string destContract, List<JcdecauxStation> allStations, ProxyRef.ProxyServiceClient proxy)
+        {
+            var service = new RoutingService(proxy);
+            return service.PlanIntercityBikeBothEnds(req, originContract, destContract, allStations, proxy);
+        }
+
+        public static ItineraryResponse BuildWalkOnlyPlanInternalWrapper(ItineraryRequest req, ProxyRef.ProxyServiceClient proxy, string reason)
+        {
+            var service = new RoutingService(proxy);
+            return service.BuildWalkOnlyPlan(req, proxy, reason);
+        }
+    }
+}
+

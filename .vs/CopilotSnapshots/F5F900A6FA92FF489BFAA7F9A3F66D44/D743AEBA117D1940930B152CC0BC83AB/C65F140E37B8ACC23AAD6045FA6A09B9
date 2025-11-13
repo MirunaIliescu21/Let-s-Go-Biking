@@ -1,0 +1,52 @@
+﻿using System;
+using System.Runtime.Caching;
+
+namespace ProxyCacheService.Caching
+{
+    public class GenericProxyCache<T> where T : class
+    {
+        private readonly MemoryCache _cache = MemoryCache.Default;
+        public DateTimeOffset dt_default;
+
+        public GenericProxyCache()
+        {
+            dt_default = ObjectCache.InfiniteAbsoluteExpiration; // fără expirare implicit
+        }
+
+        public T Get(string cacheItemName)
+        {
+            return GetInternal(cacheItemName, dt_default);
+        }
+
+        public T Get(string cacheItemName, double dt_seconds)
+        {
+            var abs = DateTimeOffset.Now.AddSeconds(dt_seconds);
+            return GetInternal(cacheItemName, abs);
+        }
+
+        public T Get(string cacheItemName, DateTimeOffset dt)
+        {
+            return GetInternal(cacheItemName, dt);
+        }
+
+        private T GetInternal(string key, DateTimeOffset absExpiration)
+        {
+            if (_cache.Get(key) is T obj)
+            {
+                System.Diagnostics.Debug.WriteLine($"[{DateTime.Now:T}] Cache HIT for key '{key}'");
+                return obj;
+            }
+
+            System.Diagnostics.Debug.WriteLine($"[{DateTime.Now:T}] Cache MISS for key '{key}'");
+
+            // Creează T cu ctor(string key)
+            obj = Activator.CreateInstance(typeof(T), key) as T
+                  ?? throw new InvalidOperationException(
+                         $"Type {typeof(T).FullName} must have a public constructor .ctor(string).");
+
+            _cache.Set(key, obj, absExpiration);
+            return obj;
+        }
+    }
+}
+

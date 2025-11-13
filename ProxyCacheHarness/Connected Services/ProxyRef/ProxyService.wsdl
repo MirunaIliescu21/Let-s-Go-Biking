@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<wsdl:definitions xmlns:wsam="http://www.w3.org/2007/05/addressing/metadata" xmlns:wsx="http://schemas.xmlsoap.org/ws/2004/09/mex" xmlns:wsap="http://schemas.xmlsoap.org/ws/2004/08/addressing/policy" xmlns:msc="http://schemas.microsoft.com/ws/2005/12/wsdl/contract" xmlns:wsp="http://schemas.xmlsoap.org/ws/2004/09/policy" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:wsu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd" xmlns:soap12="http://schemas.xmlsoap.org/wsdl/soap12/" xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/" xmlns:tns="http://tempuri.org/" xmlns:wsa10="http://www.w3.org/2005/08/addressing" xmlns:wsaw="http://www.w3.org/2006/05/addressing/wsdl" xmlns:wsa="http://schemas.xmlsoap.org/ws/2004/08/addressing" name="ProxyService" targetNamespace="http://tempuri.org/" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/">
+  <wsdl:types>
+    <xsd:schema targetNamespace="http://tempuri.org/Imports">
+      <xsd:import schemaLocation="http://localhost:8734/Design_Time_Addresses/ProxyCacheService/Service1/?xsd=xsd0" namespace="http://tempuri.org/" />
+      <xsd:import schemaLocation="http://localhost:8734/Design_Time_Addresses/ProxyCacheService/Service1/?xsd=xsd1" namespace="http://schemas.microsoft.com/2003/10/Serialization/" />
+    </xsd:schema>
+  </wsdl:types>
+  <wsdl:message name="IProxyService_GetJcdecauxContractsGeneric_InputMessage">
+    <wsdl:part name="parameters" element="tns:GetJcdecauxContractsGeneric" />
+  </wsdl:message>
+  <wsdl:message name="IProxyService_GetJcdecauxContractsGeneric_OutputMessage">
+    <wsdl:part name="parameters" element="tns:GetJcdecauxContractsGenericResponse" />
+  </wsdl:message>
+  <wsdl:message name="IProxyService_GetJcdecauxStationsGeneric_InputMessage">
+    <wsdl:part name="parameters" element="tns:GetJcdecauxStationsGeneric" />
+  </wsdl:message>
+  <wsdl:message name="IProxyService_GetJcdecauxStationsGeneric_OutputMessage">
+    <wsdl:part name="parameters" element="tns:GetJcdecauxStationsGenericResponse" />
+  </wsdl:message>
+  <wsdl:message name="IProxyService_Get_InputMessage">
+    <wsdl:part name="parameters" element="tns:Get" />
+  </wsdl:message>
+  <wsdl:message name="IProxyService_Get_OutputMessage">
+    <wsdl:part name="parameters" element="tns:GetResponse" />
+  </wsdl:message>
+  <wsdl:message name="IProxyService_GetWithTtl_InputMessage">
+    <wsdl:part name="parameters" element="tns:GetWithTtl" />
+  </wsdl:message>
+  <wsdl:message name="IProxyService_GetWithTtl_OutputMessage">
+    <wsdl:part name="parameters" element="tns:GetWithTtlResponse" />
+  </wsdl:message>
+  <wsdl:message name="IProxyService_Evict_InputMessage">
+    <wsdl:part name="parameters" element="tns:Evict" />
+  </wsdl:message>
+  <wsdl:message name="IProxyService_Evict_OutputMessage">
+    <wsdl:part name="parameters" element="tns:EvictResponse" />
+  </wsdl:message>
+  <wsdl:portType name="IProxyService">
+    <wsdl:operation name="GetJcdecauxContractsGeneric">
+      <wsdl:input wsaw:Action="http://tempuri.org/IProxyService/GetJcdecauxContractsGeneric" message="tns:IProxyService_GetJcdecauxContractsGeneric_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IProxyService/GetJcdecauxContractsGenericResponse" message="tns:IProxyService_GetJcdecauxContractsGeneric_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="GetJcdecauxStationsGeneric">
+      <wsdl:input wsaw:Action="http://tempuri.org/IProxyService/GetJcdecauxStationsGeneric" message="tns:IProxyService_GetJcdecauxStationsGeneric_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IProxyService/GetJcdecauxStationsGenericResponse" message="tns:IProxyService_GetJcdecauxStationsGeneric_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="Get">
+      <wsdl:input wsaw:Action="http://tempuri.org/IProxyService/Get" message="tns:IProxyService_Get_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IProxyService/GetResponse" message="tns:IProxyService_Get_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="GetWithTtl">
+      <wsdl:input wsaw:Action="http://tempuri.org/IProxyService/GetWithTtl" message="tns:IProxyService_GetWithTtl_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IProxyService/GetWithTtlResponse" message="tns:IProxyService_GetWithTtl_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="Evict">
+      <wsdl:input wsaw:Action="http://tempuri.org/IProxyService/Evict" message="tns:IProxyService_Evict_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IProxyService/EvictResponse" message="tns:IProxyService_Evict_OutputMessage" />
+    </wsdl:operation>
+  </wsdl:portType>
+  <wsdl:binding name="BasicHttpBinding_IProxyService" type="tns:IProxyService">
+    <soap:binding transport="http://schemas.xmlsoap.org/soap/http" />
+    <wsdl:operation name="GetJcdecauxContractsGeneric">
+      <soap:operation soapAction="http://tempuri.org/IProxyService/GetJcdecauxContractsGeneric" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetJcdecauxStationsGeneric">
+      <soap:operation soapAction="http://tempuri.org/IProxyService/GetJcdecauxStationsGeneric" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="Get">
+      <soap:operation soapAction="http://tempuri.org/IProxyService/Get" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetWithTtl">
+      <soap:operation soapAction="http://tempuri.org/IProxyService/GetWithTtl" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="Evict">
+      <soap:operation soapAction="http://tempuri.org/IProxyService/Evict" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+  <wsdl:service name="ProxyService">
+    <wsdl:port name="BasicHttpBinding_IProxyService" binding="tns:BasicHttpBinding_IProxyService">
+      <soap:address location="http://localhost:8734/Design_Time_Addresses/ProxyCacheService/Service1/" />
+    </wsdl:port>
+  </wsdl:service>
+</wsdl:definitions>

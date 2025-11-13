@@ -1,0 +1,59 @@
+﻿using System;
+using System.Runtime.Caching;
+
+namespace ProxyCacheService.Caching
+{
+    public class GenericProxyCache<T> where T : class
+    {
+        private readonly MemoryCache _cache = MemoryCache.Default;
+        public DateTimeOffset dt_default;
+        private readonly Func<string, T> _factory;
+
+        // Default ctor: preserve existing behavior by using Activator to call ctor(string)
+        public GenericProxyCache() : this(DefaultFactory)
+        {
+        }
+
+        // Allow callers to supply a factory for creating T from the cache key
+        public GenericProxyCache(Func<string, T> factory)
+        {
+            dt_default = ObjectCache.InfiniteAbsoluteExpiration; // without expiration by default
+            _factory = factory ?? throw new ArgumentNullException(nameof(factory));
+        }
+
+        private static T DefaultFactory(string key)
+        {
+            var obj = Activator.CreateInstance(typeof(T), key) as T;
+            if (obj == null)
+                throw new InvalidOperationException($"Type {typeof(T).Name} needs a constructor that accepts a single string parameter, or supply a factory to GenericProxyCache<{typeof(T).Name}>.");
+            return obj;
+        }
+
+        public T Get(string cacheItemName)
+        {
+            return GetInternal(cacheItemName, dt_default);
+        }
+
+        public T Get(string cacheItemName, double dt_seconds)
+        {
+            var dt = DateTimeOffset.UtcNow.AddSeconds(dt_seconds);
+            return GetInternal(cacheItemName, dt);
+        }
+
+        public T Get(string cacheItemName, DateTimeOffset dt)
+        {
+            return GetInternal(cacheItemName, dt);
+        }
+
+        private T GetInternal(string key, DateTimeOffset absExpiration)
+        {
+            if (_cache.Get(key) is T obj) return obj;
+
+            // Use the provided factory to create the instance
+            obj = _factory(key) ?? throw new InvalidOperationException($"Factory for type {typeof(T).Name} returned null.");
+
+            _cache.Set(key, obj, absExpiration);
+            return obj;
+        }
+    }
+}

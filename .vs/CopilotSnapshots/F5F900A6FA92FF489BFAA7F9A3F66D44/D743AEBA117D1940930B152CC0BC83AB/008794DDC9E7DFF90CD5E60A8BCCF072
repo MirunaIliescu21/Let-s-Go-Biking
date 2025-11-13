@@ -1,0 +1,33 @@
+﻿using System.Configuration;
+using System.Net.Http;
+
+namespace ProxyCacheService.Caching
+{
+    /// <summary>
+    /// Represents the JCDecaux contracts resource. This type knows how to fetch its own
+    /// content given a cache key (the constructor argument is currently unused).
+    /// The class performs a blocking HTTP request in the constructor — consider refactoring
+    /// to avoid network calls in ctors for better testability.
+    /// </summary>
+    public sealed class JcdecauxContractsResource
+    {
+        /// <summary>
+        /// Raw HTTP response content for the contracts endpoint.
+        /// </summary>
+        public string Content { get; private set; }
+
+        /// <summary>
+        /// Constructor that performs an HTTP GET to the JCDecaux contracts endpoint.
+        /// The incoming string parameter is ignored; the type constructs the URL from configuration.
+        /// </summary>
+        public JcdecauxContractsResource(string _ /*unused*/)
+        {
+            var apiKey = ConfigurationManager.AppSettings["JCDECAUX_API_KEY"];
+            var url = $"https://api.jcdecaux.com/vls/v3/contracts?apiKey={apiKey}";
+            using (var http = new HttpClient())
+            {
+                Content = http.GetStringAsync(url).GetAwaiter().GetResult();
+            }
+        }
+    }
+}

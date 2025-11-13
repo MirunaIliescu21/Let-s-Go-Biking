@@ -1,0 +1,15 @@
+[
+  {
+    "Name": "New Profile",
+    "Projects": [
+      {
+        "Path": "RoutingServiceREST\\RoutingServiceREST.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "ProxyCacheService\\ProxyCacheService.csproj",
+        "Action": "Start"
+      }
+    ]
+  }
+]

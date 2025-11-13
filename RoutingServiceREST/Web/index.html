@@ -1,0 +1,453 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>Let's go Biking — MVP</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet"
+          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+          crossorigin="" />
+    <style>
+        :root {
+            --accent: #2563eb;
+            --card: #f8fafc;
+        }
+
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+            background: #0b1220;
+            color: #e5e7eb;
+        }
+
+        header {
+            padding: 16px 20px;
+            border-bottom: 1px solid #111827;
+            background: #0f172a;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+            header h1 {
+                margin: 0;
+                font-size: 18px;
+                letter-spacing: .3px;
+            }
+
+        .container {
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            gap: 16px;
+            height: calc(100vh - 64px);
+            padding: 16px;
+        }
+
+        .card {
+            background: #0f172a;
+            border: 1px solid #111827;
+            border-radius: 14px;
+            padding: 16px;
+        }
+
+        label {
+            display: block;
+            font-size: 12px;
+            opacity: .9;
+            margin-bottom: 6px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid #1f2937;
+            background: #0b1326;
+            color: #e5e7eb;
+        }
+
+        .row {
+            display: grid;
+            gap: 12px;
+        }
+
+        .btn {
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            border-radius: 10px;
+            border: 1px solid #1f2937;
+            background: #111827;
+            color: #e5e7eb;
+        }
+
+            .btn.primary {
+                background: linear-gradient(180deg, #2563eb, #1d4ed8);
+                border: none;
+            }
+
+            .btn:disabled {
+                opacity: .6;
+                cursor: not-allowed;
+            }
+
+        #map {
+            width: 100%;
+            height: 100%;
+            border-radius: 14px;
+            border: 1px solid #111827;
+        }
+
+        .pill {
+          display: inline-block;
+          font-size: 13px;
+          padding: 3px 8px;
+          border-radius: 9999px;
+          border: 1px solid #1f2937;
+          background: #1e293b;
+          color: #e5e7eb;
+        }
+        .pill-ok {
+          background: #164e29;
+          border-color: #25613a;
+          color: #d1fae5;
+        }
+        .pill-ko {
+          background: #4b1a1a;
+          border-color: #6b2323;
+          color: #fecaca;
+        }
+
+        ul {
+          margin: 10px 0 0;
+          padding-left: 20px;
+          font-size: 14px;
+          line-height: 1.5;
+        }
+
+        li { margin: 4px 0; }
+
+        .small {
+          font-size: 14px;
+          opacity: 0.9;
+          line-height: 1.4;
+        }
+
+    </style>
+</head>
+<body>
+    <header>
+    <h1> Let's go Biking — Demo Front</h1>
+    </header>
+
+    <div class="container">
+        <div class="card">
+            <div class="row">
+                <div>
+                    <label>Origin</label>
+                    <input id="origin" type="text" placeholder="Place du Capitole, Toulouse" value="Place du Capitole, Toulouse" />
+                </div>
+                <div>
+                    <label>Destination</label>
+                    <input id="destination" type="text" placeholder="Gare Matabiau, Toulouse" value="Gare Matabiau, Toulouse" />
+                </div>
+                <div class="row" style="grid-template-columns: 1fr auto;">
+              <!-- Small hint for users. It tells the user that the server will geocode addresses. -->
+              <div class="small">Tip: you can only enter addresses; the server geocodes with ORS</div>
+                    <button id="btn" class="btn primary">Get itinerary</button>
+                </div>
+            </div>
+
+      <div id="result" style="margin-top:16px;">
+        <div class="pill">Awaiting input…</div>
+      </div>
+        </div>
+
+        <div id="map"></div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+            crossorigin=""></script>
+    <script>
+  // The API URL here:
+  const API_BASE = "http://localhost:8733/Design_Time_Addresses/RoutingServiceREST/Service1";
+
+  // Initialize the Leaflet map and attach it to the #map element.
+  const map = L.map('map', { zoomControl: true });
+    const osm = L.tileLayer(
+      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      { maxZoom: 19, attribution: "&copy; OpenStreetMap" }
+    ).addTo(map);
+    map.setView([43.6045, 1.444], 13);
+
+  // Arrays used to keep track of drawn markers and polylines so they can be removed later.
+  const markers = [];
+  const polylines = [];
+  const segmentsGroup = L.layerGroup().addTo(map);
+
+  // Layers for the three route segments (walk -> bike -> walk). Kept separate to easily style/remove them.
+  let layerWalk1 = null;
+  let layerBike  = null;
+  let layerWalk2 = null;
+
+
+    function clearMap() {
+      // Remove all segments from the segments group
+      segmentsGroup.clearLayers();
+      // Remove all tracked markers and polylines from the map and clear the arrays.
+      markers.forEach(m => m.remove());
+      polylines.forEach(p => p.remove());
+      markers.length = 0;
+      polylines.length = 0;
+
+      // Also remove any specialized route layers if present.
+      if (layerWalk1) { map.removeLayer(layerWalk1); layerWalk1 = null; }
+      if (layerBike)  { map.removeLayer(layerBike);  layerBike  = null; }
+      if (layerWalk2) { map.removeLayer(layerWalk2); layerWalk2 = null; }
+    }
+
+    function addMarker(lat, lon, label, color) {
+      // Create a small circle marker with an optional tooltip label.
+      const m = L.circleMarker([lat, lon], {
+        radius: 7, weight: 2, color: color || "#2563eb", fillOpacity: .8
+      }).bindTooltip(label, {permanent:false, direction:"top"});
+      m.addTo(map);
+      markers.push(m);
+      return m;
+    }
+
+    function addLine(coords, color) {
+      // Draw a simple polyline and track it in the polylines array.
+      const p = L.polyline(coords, { weight: 4, opacity: .9, color: color || "#22c55e" }).addTo(map);
+      polylines.push(p);
+      return p;
+    }
+
+    function fitAll() {
+      const group = L.featureGroup([...markers, ...polylines]);
+      if (group.getLayers().length > 0) map.fitBounds(group.getBounds().pad(0.2));
+    }
+
+    async function getItinerary(origin, destination) {
+      // Send a POST request to the API endpoint /itinerary with JSON body.
+      const url = API_BASE + "/itinerary";
+      const body = { Origin: origin, Destination: destination, Debug: true };
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+      // If the response is not OK, throw an error to be handled by the caller.
+      if (!res.ok) throw new Error("HTTP " + res.status + " " + res.statusText);
+      return res.json();
+    }
+
+    function renderResult(r) {
+      const el = document.getElementById('result');
+      if (!r.Success) {
+        // If server indicates failure, show an error pill with the server message.
+        el.innerHTML = `<div class="pill" style="border-color:#7f1d1d;background:#1f0b0b;">${r.Message || "Error"}</div>`;
+        return;
+      }
+      const mins = (s) => Math.round((s || 0) / 60);
+      const km = (m) => (m ? (m / 1000).toFixed(2) : "0.00");
+      const segs = Array.isArray(r.Segments) ? r.Segments : [];
+
+      // Count the number of bike segments; if Segments are missing, use a fallback heuristic
+      let bikeSegs = segs.filter(s => (s.Mode || s.mode) === "bike").length;
+
+      // Fallback: if Segments are missing but it looks like a both-ends bike trip, assume 2 bike segments
+      if (bikeSegs === 0 && r.UseBike) {
+        const looksBothEnds =
+          // either 2 segments bike in instructions
+          (Array.isArray(r.Instructions) && r.Instructions.some(t => /Walk \(inter-city\)/i.test(t))) ||
+          // or we have both origin+dest contracts set and different
+          (r.OriginContract && r.DestContract && r.OriginContract !== r.DestContract);
+        if (looksBothEnds) 
+          bikeSegs = 2;
+      }
+
+      const useMultiple = bikeSegs >= 2;
+
+      const badges = `
+        <div style="display:flex; gap:.5rem; align-items:center; margin:.25rem 0 .5rem 0;">
+          <span class="pill ${r.UseBike ? 'pill-ok' : 'pill-ko'}">
+            UseBike: ${r.UseBike ? 'Yes' : 'No'}
+          </span>
+          ${useMultiple ? `<span class="pill pill-ok">UseMultipleBikes: Yes (${bikeSegs})</span>` : ''}
+        </div>
+      `;
+
+      // Totals per mode
+      const sum = (mode, field) => segs.filter(s => (s.Mode||s.mode)===mode)
+                                       .reduce((a,s)=>a+(s[field]||0),0);
+      const walkDist = sum("walk","DistanceMeters");
+      const walkSec  = sum("walk","DurationSec");
+      const bikeDist = sum("bike","DistanceMeters");
+      const bikeSec  = sum("bike","DurationSec");
+
+      // Per-walk-segment list with labels
+      function walkLabel(idx){
+        const prev = segs[idx-1]?.Mode || segs[idx-1]?.mode;
+        const next = segs[idx+1]?.Mode || segs[idx+1]?.mode;
+        if (prev==="bike" && next==="bike") return "Walk (inter-city)";
+        if (next==="bike") return "Walk-in";
+        if (prev==="bike") return "Walk-out";
+        return "Walk";
+      }
+
+      const walkSegments = segs
+        .map((s,i)=>({s,i}))
+        .filter(x => (x.s.Mode||x.s.mode)==="walk")
+        .map(x=>{
+          const label = walkLabel(x.i);
+          const dmin  = mins(x.s.DurationSec);
+          const dkm   = km(x.s.DistanceMeters);
+          const from  = x.s.FromName || "";
+          const to    = x.s.ToName   || "";
+          let path = "";
+          if (from && to) path = `${from} → ${to}`;
+          else if (from)  path = `${from} → Destination`;
+          else if (to)    path = `Origin → ${to}`;
+          else            path = "—";
+
+          return `<li><b>${label}:</b> ${path} <b>${dmin} min</b> (${dkm} km)</li>`;
+        });
+
+      const walkSegmentsBlock = walkSegments.length ? `
+        <div style="margin-top:6px" class="small">
+          Walking segments:
+          <ul style="margin:6px 0 0 16px">${walkSegments.join("")}</ul>
+        </div>` : "";
+
+      el.innerHTML = `
+        ${badges}
+        <div style="margin-top:8px" class="small">
+          Walk-only: <b>${Math.round((r.WalkOnlyDurationSec||0)/60)} min</b> (${(r.WalkOnlyDistanceMeters? (r.WalkOnlyDistanceMeters/1000).toFixed(2) : "0.00")} km)
+          &nbsp;|&nbsp;
+          Bike-plan: <b>${Math.round((r.BikePlanDurationSec||0)/60)} min</b> (${(r.BikePlanDistanceMeters? (r.BikePlanDistanceMeters/1000).toFixed(2) : "0.00")} km)
+        </div>
+
+        ${r.Message ? `<hr style="margin:10px 0; border:0; border-top:1px solid #1e293b;"><div style="font-size:14px; color:#93c5fd;">${r.Message}</div>` : ""}
+
+        <div style="margin-top:4px" class="small">
+          Walking total: <b>${mins(walkSec)} min</b> (${km(walkDist)} km)
+          &nbsp;|&nbsp;
+          Biking total: <b>${mins(bikeSec)} min</b> (${km(bikeDist)} km)
+        </div>
+        ${walkSegmentsBlock}
+
+        <ul style="margin-top:8px">${(r.Instructions||[]).map(s=>`<li>${s}</li>`).join("")}</ul>
+      `;
+
+      if (Array.isArray(r.Segments) && r.Segments.length > 0) {
+        clearMap();
+        addMarker(r.OriginResolvedLat, r.OriginResolvedLon, "Origin", "#22c55e");
+        addMarker(r.DestResolvedLat,   r.DestResolvedLon,   "Destination", "#ef4444");
+
+        r.Segments.forEach(seg => {
+          const color = seg.Mode === "bike" ? "#22c55e" : "#64748b";
+          const opts  = seg.Mode === "bike" ? {weight:5, opacity:.95, color}
+                                            : {weight:4, opacity:.9, color, dashArray:"4,6"};
+          if (Array.isArray(seg.Coords) && seg.Coords.length > 0) {
+            // Draw each segment into the segments group
+            L.polyline(seg.Coords, opts).addTo(segmentsGroup);
+          }
+        });
+
+        // Fit the map view to show all segments
+        const layers = segmentsGroup.getLayers();
+        if (layers.length) {
+          const group = L.featureGroup(layers);
+          map.fitBounds(group.getBounds().pad(0.15));
+        }
+        return;
+      }
+
+      layerWalk1?.bindTooltip(`Walk: ${km(r.Walk1DistanceMeters)} km`);
+      layerBike ?.bindTooltip(`Bike: ${km(r.BikeDistanceMeters)} km`);
+      layerWalk2?.bindTooltip(`Walk: ${km(r.Walk2DistanceMeters)} km`);
+
+      // Markers & lines (3 simple segments: walk -> bike -> walk)
+      // At this point we received a successful response. The code below visualizes the route:
+      // - place origin/destination markers
+      // - optionally place pickup/dropoff station markers
+      // - draw route segments using either detailed coordinates (lines) or fallback straight lines
+      clearMap();
+
+      // Add markers for the resolved origin and destination coordinates returned by the server.
+      addMarker(r.OriginResolvedLat, r.OriginResolvedLon, "Origin", "#22c55e");
+      addMarker(r.DestResolvedLat,   r.DestResolvedLon,   "Destination", "#ef4444");
+
+      // If the server returned suggested bike stations, find the selected 'from' and 'to' stations.
+      const from = (r.BikeFromTop3 && r.BikeFromTop3[0] && r.BikeFromTop3.find(x => x.Name === r.BikeFrom)) || null;
+      const to   = (r.BikeToTop3 && r.BikeToTop3[0] && r.BikeToTop3.find(x => x.Name === r.BikeTo)) || null;
+
+      if (from) addMarker(from.Lat, from.Lon, "Pickup: " + from.Name, "#38bdf8");
+      if (to)   addMarker(to.Lat,   to.Lon,   "Dropoff: " + to.Name,   "#38bdf8");
+
+      // Check whether the server provided detailed geometry (arrays of [lat,lon] pairs) for each segment
+      const hasWalk1 = Array.isArray(r.Walk1Coords) && r.Walk1Coords.length > 0;
+      const hasBike  = Array.isArray(r.BikeCoords)  && r.BikeCoords.length  > 0;
+      const hasWalk2 = Array.isArray(r.Walk2Coords) && r.Walk2Coords.length > 0;
+
+      // Clear any existing route layers (clearMap() already did this, but just to be safe)
+      if (layerWalk1) { map.removeLayer(layerWalk1); layerWalk1 = null; }
+      if (layerBike)  { map.removeLayer(layerBike);  layerBike  = null; }
+      if (layerWalk2) { map.removeLayer(layerWalk2); layerWalk2 = null; }
+
+      // Draw the received geometries with different styles: dashed gray for walking, solid green for biking.
+      if (hasWalk1) layerWalk1 = L.polyline(r.Walk1Coords, { weight: 4, opacity: .9, color: "#64748b", dashArray: "4,6" }).addTo(map);
+      if (hasBike)  layerBike  = L.polyline(r.BikeCoords,  { weight: 5, opacity: .95, color: "#22c55e" }).addTo(map);
+      if (hasWalk2) layerWalk2 = L.polyline(r.Walk2Coords, { weight: 4, opacity: .9, color: "#64748b", dashArray: "4,6" }).addTo(map);
+
+      // If any segment does not include detailed geometry, fall back to straight connector lines.
+      if (!hasWalk1 && from) addLine([[r.OriginResolvedLat, r.OriginResolvedLon], [from.Lat, from.Lon]], "#64748b");
+      if (!hasBike  && from && to) addLine([[from.Lat, from.Lon], [to.Lat, to.Lon]], "#22c55e");
+      if (!hasWalk2 && to) addLine([[to.Lat, to.Lon], [r.DestResolvedLat, r.DestResolvedLon]], "#64748b");
+
+      const all = []
+        .concat(r.Walk1Coords || [])
+        .concat(r.BikeCoords  || [])
+        .concat(r.Walk2Coords || []);
+      // If there are detailed coordinates use them to set the viewport; otherwise use the visible markers/lines.
+      if (all.length > 0) {
+        map.fitBounds(all);
+      } else {
+        fitAll(); // fallback for straight connector lines
+      }
+    }
+
+    document.getElementById('btn').addEventListener('click', async () => {
+      const btn = document.getElementById('btn');
+      btn.disabled = true; btn.textContent = "Loading…";
+      try {
+        const origin = document.getElementById('origin').value.trim();
+        const destination = document.getElementById('destination').value.trim();
+        const r = await getItinerary(origin, destination);
+        renderResult(r);
+      } catch (e) {
+        // Show any uncaught errors (network, parse, etc.) as an error pill.
+        document.getElementById('result').innerHTML = `<div class="pill" style="border-color:#7f1d1d;background:#1f0b0b;">${e.message}</div>`;
+      } finally {
+        btn.disabled = false; btn.textContent = "Get itinerary";
+      }
+    });
+
+    // Auto-run with the input values on page load so the UI shows an example result immediately.
+    (async () => {
+      const r = await getItinerary(
+        document.getElementById('origin').value,
+        document.getElementById('destination').value
+      );
+      renderResult(r);
+    })();
+    </script>
+</body>
+</html>

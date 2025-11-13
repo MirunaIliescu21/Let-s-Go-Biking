@@ -1,0 +1,54 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\eComputer\\Documents\\MiddlewareSoftware\\PROJECT\\RoutingServiceREST\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{5103D571-3F2F-4788-923F-97EB20800BB0}|RoutingServiceREST\\RoutingServiceREST.csproj|c:\\users\\ecomputer\\documents\\middlewaresoftware\\project\\routingservicerest\\routingservicerest\\planning\\walkonlyplan.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{5103D571-3F2F-4788-923F-97EB20800BB0}|RoutingServiceREST\\RoutingServiceREST.csproj|solutionrelative:routingservicerest\\planning\\walkonlyplan.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{5103D571-3F2F-4788-923F-97EB20800BB0}|RoutingServiceREST\\RoutingServiceREST.csproj|c:\\users\\ecomputer\\documents\\middlewaresoftware\\project\\routingservicerest\\routingservicerest\\planning\\itineraryplanner.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{5103D571-3F2F-4788-923F-97EB20800BB0}|RoutingServiceREST\\RoutingServiceREST.csproj|solutionrelative:routingservicerest\\planning\\itineraryplanner.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 0,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "WalkOnlyPlan.cs",
+              "DocumentMoniker": "C:\\Users\\eComputer\\Documents\\MiddlewareSoftware\\PROJECT\\RoutingServiceREST\\RoutingServiceREST\\Planning\\WalkOnlyPlan.cs",
+              "RelativeDocumentMoniker": "RoutingServiceREST\\Planning\\WalkOnlyPlan.cs",
+              "ToolTip": "C:\\Users\\eComputer\\Documents\\MiddlewareSoftware\\PROJECT\\RoutingServiceREST\\RoutingServiceREST\\Planning\\WalkOnlyPlan.cs",
+              "RelativeToolTip": "RoutingServiceREST\\Planning\\WalkOnlyPlan.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA4AAABIAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-12T15:15:33.522Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "ItineraryPlanner.cs",
+              "DocumentMoniker": "C:\\Users\\eComputer\\Documents\\MiddlewareSoftware\\PROJECT\\RoutingServiceREST\\RoutingServiceREST\\Planning\\ItineraryPlanner.cs",
+              "RelativeDocumentMoniker": "RoutingServiceREST\\Planning\\ItineraryPlanner.cs",
+              "ToolTip": "C:\\Users\\eComputer\\Documents\\MiddlewareSoftware\\PROJECT\\RoutingServiceREST\\RoutingServiceREST\\Planning\\ItineraryPlanner.cs",
+              "RelativeToolTip": "RoutingServiceREST\\Planning\\ItineraryPlanner.cs",
+              "ViewState": "AgIAABgAAAAAAAAAAAAYwDkAAAAjAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-12T15:06:50.885Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

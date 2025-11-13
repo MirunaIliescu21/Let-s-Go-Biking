@@ -1,0 +1,20 @@
+﻿using System.Configuration;
+using System.Net.Http;
+
+namespace ProxyCacheService.Caching
+{
+    public sealed class JcdecauxContractsResource
+    {
+        public string Content { get; }
+
+        public JcdecauxContractsResource(string _ /*unused*/)
+        {
+            var apiKey = ConfigurationManager.AppSettings["JCDECAUX_API_KEY"];
+            var url = $"https://api.jcdecaux.com/vls/v3/contracts?apiKey={apiKey}";
+            using (var http = new HttpClient())
+            {
+                Content = http.GetStringAsync(url).GetAwaiter().GetResult();
+            }
+        }
+    }
+}
