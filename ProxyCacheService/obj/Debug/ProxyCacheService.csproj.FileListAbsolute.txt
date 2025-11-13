@@ -1,7 +1,0 @@
-C:\Users\eComputer\Documents\MiddlewareSoftware\PROJECT\RoutingServiceREST\ProxyCacheService\bin\Debug\ProxyCacheService.dll.config
-C:\Users\eComputer\Documents\MiddlewareSoftware\PROJECT\RoutingServiceREST\ProxyCacheService\bin\Debug\ProxyCacheService.dll
-C:\Users\eComputer\Documents\MiddlewareSoftware\PROJECT\RoutingServiceREST\ProxyCacheService\bin\Debug\ProxyCacheService.pdb
-C:\Users\eComputer\Documents\MiddlewareSoftware\PROJECT\RoutingServiceREST\ProxyCacheService\obj\Debug\ProxyCacheService.csproj.AssemblyReference.cache
-C:\Users\eComputer\Documents\MiddlewareSoftware\PROJECT\RoutingServiceREST\ProxyCacheService\obj\Debug\ProxyCacheService.csproj.CoreCompileInputs.cache
-C:\Users\eComputer\Documents\MiddlewareSoftware\PROJECT\RoutingServiceREST\ProxyCacheService\obj\Debug\ProxyCacheService.dll
-C:\Users\eComputer\Documents\MiddlewareSoftware\PROJECT\RoutingServiceREST\ProxyCacheService\obj\Debug\ProxyCacheService.pdb

@@ -1,7 +1,0 @@
-C:\Users\eComputer\Documents\MiddlewareSoftware\PROJECT\RoutingServiceREST\ProxyCacheHarness\bin\Debug\ProxyCacheHarness.exe.config
-C:\Users\eComputer\Documents\MiddlewareSoftware\PROJECT\RoutingServiceREST\ProxyCacheHarness\bin\Debug\ProxyCacheHarness.exe
-C:\Users\eComputer\Documents\MiddlewareSoftware\PROJECT\RoutingServiceREST\ProxyCacheHarness\bin\Debug\ProxyCacheHarness.pdb
-C:\Users\eComputer\Documents\MiddlewareSoftware\PROJECT\RoutingServiceREST\ProxyCacheHarness\obj\Debug\ProxyCacheHarness.csproj.AssemblyReference.cache
-C:\Users\eComputer\Documents\MiddlewareSoftware\PROJECT\RoutingServiceREST\ProxyCacheHarness\obj\Debug\ProxyCacheHarness.csproj.CoreCompileInputs.cache
-C:\Users\eComputer\Documents\MiddlewareSoftware\PROJECT\RoutingServiceREST\ProxyCacheHarness\obj\Debug\ProxyCacheHarness.exe
-C:\Users\eComputer\Documents\MiddlewareSoftware\PROJECT\RoutingServiceREST\ProxyCacheHarness\obj\Debug\ProxyCacheHarness.pdb
