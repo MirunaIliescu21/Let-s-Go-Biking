@@ -867,3 +867,7 @@ Prove that we are NOT caching errors (StatusCode == 200 only)
     "4be0f2297fac09d629d0ca3bebec76b9627\",\"ageSeconds\":12,\"length\":2724}"
 
 
+### Postman response observation:
+Route coordinates (Walk1Coords, BikeCoords, Walk2Coords, Segments.Coords) are always included because the web front-end uses them to draw the polyline on the map.
+The Debug flag only adds developer-oriented information such as the top 3 candidate stations and resolved coordinates.
+

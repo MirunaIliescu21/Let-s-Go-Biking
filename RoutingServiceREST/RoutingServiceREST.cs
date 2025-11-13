@@ -79,12 +79,82 @@ namespace RoutingServiceREST
                     DestContract = nearestToDest.ContractName
                 };
 
-
+                // Build response via planner
                 var response = _planner.Plan(request, ctx);
-                response.OriginResolvedLat = request.OriginLat;
-                response.OriginResolvedLon = request.OriginLon;
-                response.DestResolvedLat = request.DestLat;
-                response.DestResolvedLon = request.DestLon;
+
+                // Adding DEBUG info
+                // Resolved coordinates + top 3 stations at origin / destination
+                if (request.Debug)
+                {
+                    response.OriginResolvedLat = request.OriginLat;
+                    response.OriginResolvedLon = request.OriginLon;
+                    response.DestResolvedLat = request.DestLat;
+                    response.DestResolvedLon = request.DestLon;
+
+                    // Take only stations from the relevant contracts
+                    var contracts = new System.Collections.Generic.HashSet<string>(
+                        new[] { ctx.OriginContract, ctx.DestContract },
+                        System.StringComparer.OrdinalIgnoreCase);
+
+                    var stations = allStations
+                        .Where(s => contracts.Contains(s.ContractName))
+                        .ToList();
+
+                    // Station with available bikes, sorted by distance from ORIGIN
+                    var fromCandidates = stations
+                        .Where(s => (s.TotalStands?.Availabilities?.Bikes ?? 0) > 0)
+                        .Select(s => new
+                        {
+                            S = s,
+                            DistM = GeoMath.HaversineMeters(
+                                request.OriginLat, request.OriginLon,
+                                s.Position.Lat, s.Position.Lon)
+                        })
+                        .OrderBy(x => x.DistM)
+                        .ThenBy(x => x.S.Name)
+                        .Take(3)
+                        .ToList();
+
+                    // Station with available stands, sorted by distance from DESTINATION
+                    var toCandidates = stations
+                        .Where(s => (s.TotalStands?.Availabilities?.Stands ?? 0) > 0)
+                        .Select(s => new
+                        {
+                            S = s,
+                            DistM = GeoMath.HaversineMeters(
+                                request.DestLat, request.DestLon,
+                                s.Position.Lat, s.Position.Lon)
+                        })
+                        .OrderBy(x => x.DistM)
+                        .ThenBy(x => x.S.Name)
+                        .Take(3)
+                        .ToList();
+
+                    response.BikeFromTop3 = fromCandidates
+                        .Select(x => new ItineraryResponse.DebugStationChoice
+                        {
+                            Name = x.S.Name,
+                            Lat = x.S.Position.Lat,
+                            Lon = x.S.Position.Lon,
+                            Bikes = x.S.TotalStands?.Availabilities?.Bikes ?? 0,
+                            Stands = x.S.TotalStands?.Availabilities?.Stands ?? 0,
+                            DistanceMeters = System.Math.Round(x.DistM, 1)
+                        })
+                        .ToList();
+
+                    response.BikeToTop3 = toCandidates
+                        .Select(x => new ItineraryResponse.DebugStationChoice
+                        {
+                            Name = x.S.Name,
+                            Lat = x.S.Position.Lat,
+                            Lon = x.S.Position.Lon,
+                            Bikes = x.S.TotalStands?.Availabilities?.Bikes ?? 0,
+                            Stands = x.S.TotalStands?.Availabilities?.Stands ?? 0,
+                            DistanceMeters = System.Math.Round(x.DistM, 1)
+                        })
+                        .ToList();
+                }
+
                 return response;
             }
             catch (System.Exception ex)
