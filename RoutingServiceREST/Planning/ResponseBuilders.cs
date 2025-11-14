@@ -37,7 +37,14 @@ namespace RoutingServiceREST.Planning
                 Walk1DistanceMeters = walk1.DistanceMeters,
                 BikeDistanceMeters = bike.DistanceMeters,
                 Walk2DistanceMeters = walk2.DistanceMeters,
-                BikePlanDistanceMeters = walk1.DistanceMeters + bike.DistanceMeters + walk2.DistanceMeters
+                BikePlanDistanceMeters = walk1.DistanceMeters + bike.DistanceMeters + walk2.DistanceMeters,
+
+                Segments = new List<ItineraryResponse.RouteSegment>
+                {
+                    Seg("walk", null, "Origin", pickup.Name, walk1),
+                    Seg("bike", originContract, pickup.Name, drop.Name, bike),
+                    Seg("walk", null, drop.Name, "Destination", walk2)
+                }
             };
         }
 
@@ -72,7 +79,14 @@ namespace RoutingServiceREST.Planning
                 Walk1DistanceMeters = walk1.DistanceMeters,
                 BikeDistanceMeters = bike.DistanceMeters,
                 Walk2DistanceMeters = walk2.DistanceMeters,
-                BikePlanDistanceMeters = walk1.DistanceMeters + bike.DistanceMeters + walk2.DistanceMeters
+                BikePlanDistanceMeters = walk1.DistanceMeters + bike.DistanceMeters + walk2.DistanceMeters,
+
+                Segments = new List<ItineraryResponse.RouteSegment>
+                {
+                    Seg("walk", null, "Origin", pickup.Name, walk1),
+                    Seg("bike", destContract, pickup.Name, drop.Name, bike),
+                    Seg("walk", null, drop.Name, "Destination", walk2)
+                }
             };
         }
 

@@ -287,10 +287,28 @@
       // Totals per mode
       const sum = (mode, field) => segs.filter(s => (s.Mode||s.mode)===mode)
                                        .reduce((a,s)=>a+(s[field]||0),0);
-      const walkDist = sum("walk","DistanceMeters");
-      const walkSec  = sum("walk","DurationSec");
-      const bikeDist = sum("bike","DistanceMeters");
-      const bikeSec  = sum("bike","DurationSec");
+      let walkDist = sum("walk","DistanceMeters");
+      let walkSec  = sum("walk","DurationSec");
+      let bikeDist = sum("bike","DistanceMeters");
+      let bikeSec  = sum("bike","DurationSec");
+
+      // Fallback when Segments are missing
+      if (segs.length === 0) {
+        walkDist = (r.Walk1DistanceMeters||0) + (r.Walk2DistanceMeters||0);
+        bikeDist = (r.BikeDistanceMeters||0);
+        // If we don't have durations per segments, don't show "0 min" – hide minutes when unknown
+        walkSec = null;
+        bikeSec = null;
+      }
+
+      // Formatted total texts
+      const walkingTotalText = walkSec == null
+      ? `${km(walkDist)} km`
+      : `<b>${mins(walkSec)} min</b> (${km(walkDist)} km)`;
+
+      const bikingTotalText = bikeSec == null
+        ? `${km(bikeDist)} km`
+        : `<b>${mins(bikeSec)} min</b> (${km(bikeDist)} km)`;
 
       // Per-walk-segment list with labels
       function walkLabel(idx){
@@ -336,12 +354,15 @@
 
         ${r.Message ? `<hr style="margin:10px 0; border:0; border-top:1px solid #1e293b;"><div style="font-size:14px; color:#93c5fd;">${r.Message}</div>` : ""}
 
+        ${r.UseBike ? `
         <div style="margin-top:4px" class="small">
-          Walking total: <b>${mins(walkSec)} min</b> (${km(walkDist)} km)
+          Walking total: ${walkingTotalText}
           &nbsp;|&nbsp;
-          Biking total: <b>${mins(bikeSec)} min</b> (${km(bikeDist)} km)
+          Biking total: ${bikingTotalText}
         </div>
         ${walkSegmentsBlock}
+        ` : ""}
+
 
         <ul style="margin-top:8px">${(r.Instructions||[]).map(s=>`<li>${s}</li>`).join("")}</ul>
       `;
