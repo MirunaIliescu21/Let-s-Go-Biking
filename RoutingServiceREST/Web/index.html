@@ -148,6 +148,21 @@
             font-size: 13px;
         }
 
+        .alert-icon {
+          width: 18px;
+          height: 18px;
+          border-radius: 9999px;
+          border: 2px solid white;
+          background: #0f172a;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 11px;
+          font-weight: 700;
+          box-shadow: 0 0 6px rgba(0,0,0,.6);
+        }
+
+
     </style>
 </head>
 <body>
@@ -180,6 +195,10 @@
       <!-- Notifications panel for real-time events -->
       <div id="notifications-panel" style="margin-top:16px;">
           <h3>Real-time events</h3>
+
+          <button id="start-alerts" class="btn" style="margin:6px 0 10px 0;">
+              Start alerts
+          </button>
 
           <div id="topic-filters" style="margin-bottom:10px;">
               <label><input type="checkbox" id="topic-meteo" checked> Meteo</label>
@@ -218,6 +237,7 @@
   const markers = [];
   const polylines = [];
   const segmentsGroup = L.layerGroup().addTo(map);
+  let currentRoute = null;
   const alertLayer = L.layerGroup().addTo(map); // for real-time alerts
 
   // Layers for the three route segments (walk -> bike -> walk). Kept separate to easily style/remove them.
@@ -278,6 +298,8 @@
     }
 
     function renderResult(r) {
+      currentRoute = r;           // remember last computed route
+      alertLayer.clearLayers();   // clear old alert markers when we compute a new route
       const el = document.getElementById('result');
       if (!r.Success) {
         // If server indicates failure, show an error pill with the server message.
@@ -392,7 +414,6 @@
         ${walkSegmentsBlock}
         ` : ""}
 
-
         <ul style="margin-top:8px">${(r.Instructions||[]).map(s=>`<li>${s}</li>`).join("")}</ul>
       `;
 
@@ -503,6 +524,8 @@
     let stompClient = null;
     const subscriptions = {}; // topicName -> subscription
 
+    let alertsStarted = false;
+
     function connectToActiveMQ() {
       // const brokerURL = "ws://localhost:61614";
       const brokerURL = "ws://localhost:61614/stomp";
@@ -527,6 +550,16 @@
 
       stompClient.activate();
     }
+
+    function startAlertsOnce() {
+      if (alertsStarted) return;
+      alertsStarted = true;
+      connectToActiveMQ();
+
+      const btn = document.getElementById("start-alerts");
+      if (btn) btn.style.display = "none";
+    }
+
 
     function updateSubscriptionsFromUI() {
       if (!stompClient || !stompClient.connected) return;
@@ -561,40 +594,6 @@
         }
       });
     }
-
-    // function addNotificationToUI(evt) {
-    //   const list = document.getElementById("notifications-list");
-    //   if (!list) return;
-
-    //   const li = document.createElement("li");
-
-    //   // Extract event details with fallbacks
-    //   const type = (evt.type || evt.Type || "event").toString().toUpperCase();
-    //   const msg = evt.message || evt.Message || "(no message)";
-    //   const severityRaw = (evt.severity || evt.Severity || "info").toString().toLowerCase();
-    //   const ts = evt.timestamp || evt.Timestamp || Date.now();
-
-    //   const colors = {
-    //     info: "#60a5fa",
-    //     warning: "#fbbf24",
-    //     danger: "#f87171"
-    //   };
-
-    //   li.style.color = colors[severityRaw] || "#93c5fd";
-    //   li.style.marginBottom = "6px";
-
-    //   const time = new Date(ts).toLocaleTimeString();
-
-    //   li.innerHTML = `
-    //     <strong>[${type}]</strong>
-    //     ${msg}
-    //     <br>
-    //     <small style="opacity:.7;">${time}</small>
-    //   `;
-
-    //   // ultima notificare sus
-    //   list.prepend(li);
-    // }
   
     function addNotificationToUI(evt) {
       const list = document.getElementById("notifications-list");
@@ -635,27 +634,68 @@
         <small style="opacity:.7;">${time}</small>
       `;
 
-      // if the event has lat/lon, add a marker on the map
-      const lat = evt.lat ?? evt.Lat;
-      const lon = evt.lon ?? evt.Lon;
-      if (typeof lat === "number" && typeof lon === "number") {
-        const marker = L.circleMarker([lat, lon], {
-          radius: 6,
-          color,
-          weight: 2,
-          fillOpacity: 0.9
-        }).addTo(alertLayer);
+      // Try to get event coordinates
+      let lat = null
+      let lon = null;
 
-        // on click on the list item, center the map on the marker
+      // If we have a current route, determine coordinates based on event type
+      if (currentRoute) {
+        if (type === "METEO") {
+          // weather near origin
+          lat = currentRoute.OriginResolvedLat;
+          lon = currentRoute.OriginResolvedLon;
+        } else if (type === "POLLUTION") {
+          // pollution near destination
+          lat = currentRoute.DestResolvedLat;
+          lon = currentRoute.DestResolvedLon;
+        } else if (type === "BIKES") {
+          // bikes near bike station if possible, otherwise in the middle of the route
+          const from = currentRoute.BikeFromTop3?.find(x => x.Name === currentRoute.BikeFrom);
+          const to   = currentRoute.BikeToTop3?.find(x => x.Name === currentRoute.BikeTo);
+
+          if (from) {
+            lat = from.Lat;
+            lon = from.Lon;
+          } else if (to) {
+            lat = to.Lat;
+            lon = to.Lon;
+          } else if (currentRoute.OriginResolvedLat && currentRoute.DestResolvedLat) {
+            // fallback: middle of the Origin–Destination segment            
+            lat = (currentRoute.OriginResolvedLat + currentRoute.DestResolvedLat) / 2;
+            lon = (currentRoute.OriginResolvedLon + currentRoute.DestResolvedLon) / 2;
+          }
+        }
+      } else {
+        // No current route: try to get coordinates directly from the event (hardcoded)
+        const evLat = evt.lat ?? evt.Lat;
+        const evLon = evt.lon ?? evt.Lon;
+        if (typeof evLat === "number" && typeof evLon === "number") {
+          lat = evLat;
+          lon = evLon;
+        }
+      }
+
+      // if we have coordinates, put a marker on the map
+      if (typeof lat === "number" && typeof lon === "number") {
+        const initial = type[0] || "!"; // M / P / B
+
+        const icon = L.divIcon({
+          className: "",
+          html: `<div class="alert-icon" style="color:${color};border-color:${color};">${initial}</div>`,
+          iconSize: [18, 18],
+          iconAnchor: [9, 9]
+        });
+
+        const marker = L.marker([lat, lon], { icon }).addTo(alertLayer);
+
         li.addEventListener("click", () => {
           map.setView(marker.getLatLng(), 14);
-          marker.openPopup?.();
         });
       }
 
+
       list.prepend(li);
     }
-
 
     function initNotificationsUI() {
       // bind checkboxes to subscribe/unsubscribe
@@ -664,7 +704,11 @@
         if (cb) cb.addEventListener("change", updateSubscriptionsFromUI);
       });
 
-      connectToActiveMQ();
+      const startBtn = document.getElementById("start-alerts");
+      if (startBtn) {
+        startBtn.addEventListener("click", startAlertsOnce);
+      }
+      //connectToActiveMQ();
     }
 
     // The script is at the end of the body, so the DOM is already loaded

@@ -7,9 +7,11 @@ using Newtonsoft.Json;
 namespace NotificationService
 {
     /**
-     * NotificationService simulates weather/pollution/bike events in the Toulouse/Lyon area,
-     * sent via ActiveMQ on topics; the front-end subscribes based on user preferences,
-     * and displays the events with an icon and marker on the map.
+     * NotificationService simulates weather/pollution/bike events, 
+     * and the frontend projects them on the map of the current route:
+     *   weather near the origin,
+     *   pollution near the destination,
+     *   bike problems near the stations used in the itinerary.
      */
     internal class Program
     {

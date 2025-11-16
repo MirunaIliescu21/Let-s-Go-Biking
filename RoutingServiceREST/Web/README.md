@@ -935,3 +935,25 @@ If the event contains coordinates, a small marker is also placed on the map.
 * The **frontend** listens via STOMP, allows topic selection, and displays colored real-time notifications.
 * This fully meets the project requirement of integrating asynchronous, real-time external information into the client UX.
 
+
+###  Real-Time Alerts Linked to the Current Itinerary
+
+In addition to receiving real-time simulated events through ActiveMQ, the web front-end contextually places each alert on the map based on the user’s **current itinerary**:
+
+* **Meteo alerts** are placed near the *origin* of the current route
+* **Pollution alerts** are placed near the *destination*
+* **Bike availability alerts** are placed near the *selected bike stations* (pickup or dropoff).
+  When no station information is available, the alert is placed at the **midpoint** of the route as a fallback.
+  This ensures they still appear on the map without requiring additional station data.
+
+Each alert is displayed in the “Real-time events” panel with a severity color (blue, yellow, red), and a corresponding marker is added on the map. Clicking a notification centers the map on the alert location.
+
+This makes alerts feel dynamic and directly related to the user's current trip, while still using the fake notification producer.
+
+```
+Origin ---- (BikeFrom Station) ---- (BikeTo Station) ---- Destination
+   ↑             ↑                       ↑                   ↑
+ METEO        BIKES                  BIKES               POLLUTION
+```
+
+Real-time alerts are *started manually* from the front-end via a “Start alerts” button, which connects to ActiveMQ over STOMP and begins receiving events only when the user is ready.
