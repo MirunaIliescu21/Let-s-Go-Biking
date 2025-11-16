@@ -31,11 +31,11 @@
             z-index: 10;
         }
 
-            header h1 {
-                margin: 0;
-                font-size: 18px;
-                letter-spacing: .3px;
-            }
+        header h1 {
+            margin: 0;
+            font-size: 18px;
+            letter-spacing: .3px;
+        }
 
         .container {
             display: grid;
@@ -85,15 +85,15 @@
             color: #e5e7eb;
         }
 
-            .btn.primary {
-                background: linear-gradient(180deg, #2563eb, #1d4ed8);
-                border: none;
-            }
+        .btn.primary {
+            background: linear-gradient(180deg, #2563eb, #1d4ed8);
+            border: none;
+        }
 
-            .btn:disabled {
-                opacity: .6;
-                cursor: not-allowed;
-            }
+        .btn:disabled {
+            opacity: .6;
+            cursor: not-allowed;
+        }
 
         #map {
             width: 100%;
@@ -137,6 +137,17 @@
           line-height: 1.4;
         }
 
+        /* styles for notifications panel */
+        #notifications-panel h3 {
+            margin: 0 0 8px;
+            font-size: 14px;
+        }
+
+        #topic-filters label {
+            margin-right: 10px;
+            font-size: 13px;
+        }
+
     </style>
 </head>
 <body>
@@ -165,8 +176,21 @@
       <div id="result" style="margin-top:16px;">
         <div class="pill">Awaiting input…</div>
       </div>
-        </div>
 
+      <!-- Notifications panel for real-time events -->
+      <div id="notifications-panel" style="margin-top:16px;">
+          <h3>Real-time events</h3>
+
+          <div id="topic-filters" style="margin-bottom:10px;">
+              <label><input type="checkbox" id="topic-meteo" checked> Meteo</label>
+              <label><input type="checkbox" id="topic-pollution" checked> Pollution</label>
+              <label><input type="checkbox" id="topic-bikes" checked> Bikes</label>
+          </div>
+
+          <ul id="notifications-list"
+              style="max-height:200px; overflow-y:auto; padding-left:18px; font-size:14px;"></ul>
+      </div>
+      </div>
         <div id="map"></div>
     </div>
 
@@ -174,6 +198,10 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
             integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
             crossorigin=""></script>
+
+    <!-- STOMP client for ActiveMQ over WebSocket -->
+    <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7.0.0/bundles/stomp.umd.min.js"></script>
+
     <script>
   // The API URL here:
   const API_BASE = "http://localhost:8733/Design_Time_Addresses/RoutingServiceREST/Service1";
@@ -469,6 +497,116 @@
       );
       renderResult(r);
     })();
+
+    // Real-time notifications via STOMP over WebSocket
+    let stompClient = null;
+    const subscriptions = {}; // topicName -> subscription
+
+    function connectToActiveMQ() {
+      // const brokerURL = "ws://localhost:61614";
+      const brokerURL = "ws://localhost:61614/stomp";
+
+
+      stompClient = new StompJs.Client({
+        brokerURL,
+        connectHeaders: {
+          login: "admin",
+          passcode: "admin"
+        },
+        debug: (str) => console.log("[STOMP]", str),
+        onConnect: () => {
+          console.log("Connected to ActiveMQ via STOMP");
+          updateSubscriptionsFromUI();
+        },
+        onStompError: (frame) => {
+          console.error("STOMP error:", frame.headers["message"]);
+          console.error("Details:", frame.body);
+        }
+      });
+
+      stompClient.activate();
+    }
+
+    function updateSubscriptionsFromUI() {
+      if (!stompClient || !stompClient.connected) return;
+
+      const topics = [
+        { id: "topic-meteo", name: "meteo" },
+        { id: "topic-pollution", name: "pollution" },
+        { id: "topic-bikes", name: "bikes" }
+      ];
+
+      topics.forEach(t => {
+        const cb = document.getElementById(t.id);
+        const active = cb && cb.checked;
+
+        if (active && !subscriptions[t.name]) {
+          // Subscribe
+          const sub = stompClient.subscribe(`/topic/${t.name}`, (message) => {
+            try {
+              const evt = JSON.parse(message.body);
+              addNotificationToUI(evt);
+            } catch (e) {
+              console.error("Error parsing message", e, message.body);
+            }
+          });
+          subscriptions[t.name] = sub;
+          console.log("Subscribed to", t.name);
+        } else if (!active && subscriptions[t.name]) {
+          // Unsubscribe
+          subscriptions[t.name].unsubscribe();
+          delete subscriptions[t.name];
+          console.log("Unsubscribed from", t.name);
+        }
+      });
+    }
+
+    function addNotificationToUI(evt) {
+      const list = document.getElementById("notifications-list");
+      if (!list) return;
+
+      const li = document.createElement("li");
+
+      // Extract event details with fallbacks
+      const type = (evt.type || evt.Type || "event").toString().toUpperCase();
+      const msg = evt.message || evt.Message || "(no message)";
+      const severityRaw = (evt.severity || evt.Severity || "info").toString().toLowerCase();
+      const ts = evt.timestamp || evt.Timestamp || Date.now();
+
+      const colors = {
+        info: "#60a5fa",
+        warning: "#fbbf24",
+        danger: "#f87171"
+      };
+
+      li.style.color = colors[severityRaw] || "#93c5fd";
+      li.style.marginBottom = "6px";
+
+      const time = new Date(ts).toLocaleTimeString();
+
+      li.innerHTML = `
+        <strong>[${type}]</strong>
+        ${msg}
+        <br>
+        <small style="opacity:.7;">${time}</small>
+      `;
+
+      // ultima notificare sus
+      list.prepend(li);
+    }
+
+    function initNotificationsUI() {
+      // bind checkboxes to subscribe/unsubscribe
+      ["topic-meteo", "topic-pollution", "topic-bikes"].forEach(id => {
+        const cb = document.getElementById(id);
+        if (cb) cb.addEventListener("change", updateSubscriptionsFromUI);
+      });
+
+      connectToActiveMQ();
+    }
+
+    // The script is at the end of the body, so the DOM is already loaded
+    initNotificationsUI();
     </script>
 </body>
 </html>
