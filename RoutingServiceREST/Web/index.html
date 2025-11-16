@@ -218,6 +218,7 @@
   const markers = [];
   const polylines = [];
   const segmentsGroup = L.layerGroup().addTo(map);
+  const alertLayer = L.layerGroup().addTo(map); // for real-time alerts
 
   // Layers for the three route segments (walk -> bike -> walk). Kept separate to easily style/remove them.
   let layerWalk1 = null;
@@ -561,13 +562,46 @@
       });
     }
 
+    // function addNotificationToUI(evt) {
+    //   const list = document.getElementById("notifications-list");
+    //   if (!list) return;
+
+    //   const li = document.createElement("li");
+
+    //   // Extract event details with fallbacks
+    //   const type = (evt.type || evt.Type || "event").toString().toUpperCase();
+    //   const msg = evt.message || evt.Message || "(no message)";
+    //   const severityRaw = (evt.severity || evt.Severity || "info").toString().toLowerCase();
+    //   const ts = evt.timestamp || evt.Timestamp || Date.now();
+
+    //   const colors = {
+    //     info: "#60a5fa",
+    //     warning: "#fbbf24",
+    //     danger: "#f87171"
+    //   };
+
+    //   li.style.color = colors[severityRaw] || "#93c5fd";
+    //   li.style.marginBottom = "6px";
+
+    //   const time = new Date(ts).toLocaleTimeString();
+
+    //   li.innerHTML = `
+    //     <strong>[${type}]</strong>
+    //     ${msg}
+    //     <br>
+    //     <small style="opacity:.7;">${time}</small>
+    //   `;
+
+    //   // ultima notificare sus
+    //   list.prepend(li);
+    // }
+  
     function addNotificationToUI(evt) {
       const list = document.getElementById("notifications-list");
       if (!list) return;
 
       const li = document.createElement("li");
 
-      // Extract event details with fallbacks
       const type = (evt.type || evt.Type || "event").toString().toUpperCase();
       const msg = evt.message || evt.Message || "(no message)";
       const severityRaw = (evt.severity || evt.Severity || "info").toString().toLowerCase();
@@ -579,21 +613,49 @@
         danger: "#f87171"
       };
 
-      li.style.color = colors[severityRaw] || "#93c5fd";
+      const color = colors[severityRaw] || "#93c5fd";
+      li.style.color = color;
       li.style.marginBottom = "6px";
+      li.style.cursor = "pointer";
 
       const time = new Date(ts).toLocaleTimeString();
 
       li.innerHTML = `
+        <span style="
+          display:inline-block;
+          width:8px;
+          height:8px;
+          border-radius:9999px;
+          background:${color};
+          margin-right:6px;
+        "></span>
         <strong>[${type}]</strong>
         ${msg}
         <br>
         <small style="opacity:.7;">${time}</small>
       `;
 
-      // ultima notificare sus
+      // if the event has lat/lon, add a marker on the map
+      const lat = evt.lat ?? evt.Lat;
+      const lon = evt.lon ?? evt.Lon;
+      if (typeof lat === "number" && typeof lon === "number") {
+        const marker = L.circleMarker([lat, lon], {
+          radius: 6,
+          color,
+          weight: 2,
+          fillOpacity: 0.9
+        }).addTo(alertLayer);
+
+        // on click on the list item, center the map on the marker
+        li.addEventListener("click", () => {
+          map.setView(marker.getLatLng(), 14);
+          marker.openPopup?.();
+        });
+      }
+
       list.prepend(li);
     }
+
 
     function initNotificationsUI() {
       // bind checkboxes to subscribe/unsubscribe

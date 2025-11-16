@@ -6,6 +6,11 @@ using Newtonsoft.Json;
 
 namespace NotificationService
 {
+    /**
+     * NotificationService simulates weather/pollution/bike events in the Toulouse/Lyon area,
+     * sent via ActiveMQ on topics; the front-end subscribes based on user preferences,
+     * and displays the events with an icon and marker on the map.
+     */
     internal class Program
     {
         private static readonly Random _rand = new Random();

@@ -871,3 +871,67 @@ Prove that we are NOT caching errors (StatusCode == 200 only)
 Route coordinates (Walk1Coords, BikeCoords, Walk2Coords, Segments.Coords) are always included because the web front-end uses them to draw the polyline on the map.
 The Debug flag only adds developer-oriented information such as the top 3 candidate stations and resolved coordinates.
 
+
+
+## Real-Time Notifications (ActiveMQ + STOMP)
+
+This feature simulates external real-time events (weather, pollution, bike availability) and delivers them to the web front-end while the user is viewing an itinerary.
+
+### How it works
+
+**1. NotificationService (C# producer)**
+A separate console application runs alongside the main system.
+It periodically generates *fake but realistic* events such as:
+
+* heavy rain or strong wind (meteo)
+* high pollution levels
+* low number of bikes at nearby stations
+
+Each event contains:
+
+* a **type** (`meteo`, `pollution`, `bikes`)
+* a **severity** (`info`, `warning`, `danger`)
+* a **message**
+* optional map coordinates (`Lat`, `Lon`)
+* a timestamp
+
+These events are serialized as JSON and published to **ActiveMQ topics** (`/topic/meteo`, `/topic/pollution`, `/topic/bikes`).
+
+
+**2. ActiveMQ (Message Broker)**
+ActiveMQ runs as a standalone broker and routes the events to any connected web clients.
+Communication uses **STOMP over WebSocket** (`ws://localhost:61614/stomp`).
+
+
+
+**3. Front-end (JavaScript STOMP consumer)**
+The web app connects to ActiveMQ using the STOMP protocol.
+The user can choose which topics they are interested in:
+
+* Meteo
+* Pollution
+* Bikes
+
+When a checkbox is checked/unchecked, the client subscribes/unsubscribes from the corresponding topic in real time.
+
+Incoming events are displayed in the **“Real-time events”** panel:
+
+* each item shows `[TYPE] message` with a color based on severity
+
+  * blue = info
+  * yellow = warning
+  * red = danger
+* events appear instantly as they are produced
+* older events remain in the list; new ones appear at the top
+* only the topics selected by the user are shown
+
+If the event contains coordinates, a small marker is also placed on the map.
+
+
+### Summary
+
+* **NotificationService** simulates external meteo/pollution/bike alerts.
+* **ActiveMQ** distributes these alerts to subscribers through topics.
+* The **frontend** listens via STOMP, allows topic selection, and displays colored real-time notifications.
+* This fully meets the project requirement of integrating asynchronous, real-time external information into the client UX.
+
