@@ -8,6 +8,7 @@
     <artifactId>ProxyCacheJavaClient</artifactId>
     <version>1.0-SNAPSHOT</version>
 
+    <!-- Java version (21) for the compiler and JAX-WS versions -->
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
@@ -17,7 +18,7 @@
     </properties>
 
     <dependencies>
-        <!-- Runtime JAX-WS RI (clientul SOAP efectiv, pentru Java 11+) -->
+        <!-- Runtime JAX-WS RI (the actual implementation that executes the SOAP calls at runtime) -->
         <dependency>
             <groupId>com.sun.xml.ws</groupId>
             <artifactId>jaxws-rt</artifactId>
@@ -27,7 +28,8 @@
 
     <build>
         <plugins>
-            <!-- Plugin care rulează wsimport și generează clasele client din WSDL -->
+            <!-- Plugin that runs wsimport and generates client classes from WSDL
+                 Read the WSDL from your URL and generate the package com.soap.proxycache.client.generated-->
             <plugin>
                 <groupId>com.sun.xml.ws</groupId>
                 <artifactId>jaxws-maven-plugin</artifactId>
@@ -40,29 +42,29 @@
                             <goal>wsimport</goal>
                         </goals>
                         <configuration>
-                            <!-- Aici folosim URL-ul WSDL, NU /mex -->
+                            <!-- My WSDL URL -->
                             <wsdlUrls>
                                 <wsdlUrl>
                                     http://localhost:8734/Design_Time_Addresses/ProxyCacheService/Service1/?wsdl
                                 </wsdlUrl>
                             </wsdlUrls>
 
-                            <!-- Pachetul în care se vor genera clasele Java -->
+                            <!-- The package in which the Java classes will be generated -->
                             <packageName>com.soap.proxycache.client.generated</packageName>
 
-                            <!-- Unde punem sursele generate -->
+                            <!-- The location where I put the generated sources -->
                             <sourceDestDir>
                                 ${project.build.directory}/generated-sources/wsimport
                             </sourceDestDir>
 
-                            <!-- Opțional: păstrează fișierele generate -->
+                            <!-- I choose to keep the generated files -->
                             <keep>true</keep>
                         </configuration>
                     </execution>
                 </executions>
             </plugin>
 
-            <!-- Compiler plugin pentru Java 21 -->
+            <!-- I make sure I have the compiler plugin for java 21 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -72,7 +74,8 @@
                 </configuration>
             </plugin>
 
-            <!-- (Opțional, dar util) adăugăm generated-sources ca source root pentru compilare -->
+            <!-- Make generated-sources the root source for compilation
+            (IntelliJ sees the imports without us having to make any manual settings) -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>build-helper-maven-plugin</artifactId>

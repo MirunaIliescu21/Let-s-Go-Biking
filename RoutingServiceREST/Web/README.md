@@ -957,3 +957,52 @@ Origin ---- (BikeFrom Station) ---- (BikeTo Station) ---- Destination
 ```
 
 Real-time alerts are *started manually* from the front-end via a “Start alerts” button, which connects to ActiveMQ over STOMP and begins receiving events only when the user is ready.
+
+
+## Heavy SOAP client (Java) – `ProxyCacheJavaClient`
+
+This module is a standalone Maven project that acts as a **heavy SOAP client** for the C# `ProxyCacheService`.  
+The goal is to consume the WCF SOAP service from Java, without re-implementing any HTTP/caching logic on the Java side.
+
+### How it works
+
+- The C# service `ProxyCacheService` exposes SOAP operations such as:
+  - `GetJcdecauxContractsGeneric(ttlSeconds)`
+  - `GetJcdecauxStationsGeneric(contract, ttlSeconds)`
+  - `Get(url)`, `GetWithTtl(url, ttlSeconds, forceRefresh, extendTtl)`
+  - `GetWithMeta(url, ttlSeconds)`
+  - `Evict(url)`
+  - `Stats()`
+- From Java we **import the WSDL** of this service and use the `jaxws-maven-plugin` to generate the client proxy classes under  
+  `com.soap.proxycache.client.generated.*`.
+- The class `TestProxyClient` shows how Java calls this SOAP service:
+
+  1. **Generic JCDecaux cache**
+     - `getJcdecauxContractsGeneric(3600)` and `getJcdecauxStationsGeneric("lyon", 30)`
+     - These methods use the generic `GenericProxyCache` on the C# side and return the raw JSON payloads.
+
+  2. **URL-based HTTP cache with HIT / MISS counters**
+     - We pick a JCDecaux URL, e.g. `https://api.jcdecaux.com/vls/v3/contracts`.
+     - First call: `getWithMeta(url, 30)`  
+       → returns `{"cache":"MISS->CACHED", ...}` and `Stats()` shows `hits:0, misses:1`.
+     - Second call with the same URL: `getWithMeta(url, 30)`  
+       → returns `{"cache":"HIT", ...}` and `Stats()` shows `hits:1, misses:1`.
+     - Then we call `evict(url)` to remove the entry from the cache.
+     - Third call: `getWithMeta(url, 30)` again  
+       → returns `{"cache":"MISS->CACHED", ...}` and `Stats()` shows `hits:1, misses:2`.
+
+  This demonstrates that:
+  - the C# `ProxyCacheService` is responsible for injecting the JCDecaux API key,
+  - HTTP responses are cached in memory with a TTL,
+  - cache hits and misses are correctly counted and exposed through the SOAP API,
+  - the Java client only consumes the SOAP operations (heavy client generated from WSDL), without knowing any low-level HTTP details.
+
+### How to run
+
+1. Start the C# `ProxyCacheService` in Visual Studio (WCF SOAP service).
+2. In IntelliJ, open the `ProxyCacheJavaClient` project.
+3. Run the `TestProxyClient` main class.
+4. The console output shows:
+   - the raw JSON for JCDecaux contracts and stations (generic cache),
+   - the cache behaviour for a specific URL (`MISS->CACHED`, `HIT`, `MISS->CACHED` after eviction),
+   - the evolving `hits` / `misses` counters from `Stats()`.
