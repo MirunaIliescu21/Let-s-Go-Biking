@@ -199,7 +199,7 @@ namespace ProxyCacheService
         /// <summary>
         /// Return simple cache statistics as a JSON string. "hits" and "misses" are counters since process start.
         /// </summary>
-        public string Stats()
+        public string Status()
         {
             // items is the current number of cached objects, not "how many URLs have I ever called".
             var items = MemoryCache.Default.GetCount();

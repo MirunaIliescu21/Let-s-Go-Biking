@@ -33,7 +33,7 @@ namespace ProxyCacheService
         void EvictGeneric(string key);
 
         [OperationContract]
-        string Stats();
+        string Status();
     }
 }
 
