@@ -29,7 +29,7 @@ namespace RoutingServiceREST
 
         public RoutingService()
         {
-            // Wire default services (simple DI)
+            // Wire default services
             var proxyFactory = new Services.ProxyFactory();
             _geocoding = new Services.OrsGeocodingService(proxyFactory);
             _routing = new Services.OrsRoutingService(proxyFactory);
