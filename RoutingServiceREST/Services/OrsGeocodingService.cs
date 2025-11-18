@@ -10,20 +10,64 @@ namespace RoutingServiceREST.Services
         private const int TTL_GEOCODE_SECONDS = 86400; // 24h
         public OrsGeocodingService(IProxyFactory factory) => _factory = factory;
 
+        private static string DetectCountryCode(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return null;
+            var lower = text.ToLowerInvariant();
+
+            // Belgium
+            if (lower.Contains("belgium") || lower.Contains("belgique") ||
+                lower.Contains("brussels") || lower.Contains("bruxelles"))
+                return "BE";
+
+            // France
+            if (lower.Contains("france") || lower.Contains("paris") ||
+                lower.Contains("lyon") || lower.Contains("toulouse") ||
+                lower.Contains("marseille"))
+                return "FR";
+
+            // Spain
+            if (lower.Contains("spain") || lower.Contains("españa") ||
+                lower.Contains("madrid") || lower.Contains("barcelona") ||
+                lower.Contains("valencia") || lower.Contains("sevilla"))
+                return "ES";
+
+            // Ireland
+            if (lower.Contains("ireland") || lower.Contains("irlande") ||
+                lower.Contains("dublin"))
+                return "IE";
+
+            // Luxembourg
+            if (lower.Contains("luxembourg"))
+                return "LU";
+
+            // poți adăuga aici și alte țări/orașe relevante dacă vrei
+            return null;
+        }
 
         public bool TryGeocode(string text, out LatLon coord)
         {
             coord = new LatLon(0, 0);
-            if (string.IsNullOrWhiteSpace(text)) return false;
+            if (string.IsNullOrWhiteSpace(text))
+                return false;
 
 
             using (var proxy = _factory.Create())
             {
                 string baseUrl = "https://api.openrouteservice.org/geocode/search";
                 bool cityMode = Utils.QueryHeuristics.IsLikelyCityQuery(text);
-                string url = $"{baseUrl}?text={Uri.EscapeDataString(text)}&size=1" +
-                (cityMode ? "&layers=locality,localadmin,county,region,macroregion" : "");
 
+                string countryCode = DetectCountryCode(text);
+                string countryParam = countryCode != null
+                    ? $"&boundary.country={countryCode}"
+                    : "";
+
+                string url = $"{baseUrl}?text={Uri.EscapeDataString(text)}&size=1" +
+                                 countryParam +
+                                 (cityMode ? "&layers=locality,localadmin,county,region,macroregion" : "");
+
+                //string url = $"{baseUrl}?text={Uri.EscapeDataString(text)}&size=1" +
+                //(cityMode ? "&layers=locality,localadmin,county,region,macroregion" : "");
 
                 string json = proxy.GetWithTtl(url, TTL_GEOCODE_SECONDS, false, false);
                 var trimmed = json?.TrimStart() ?? "";

@@ -1006,3 +1006,15 @@ The goal is to consume the WCF SOAP service from Java, without re-implementing a
    - the raw JSON for JCDecaux contracts and stations (generic cache),
    - the cache behaviour for a specific URL (`MISS->CACHED`, `HIT`, `MISS->CACHED` after eviction),
    - the evolving `hits` / `misses` counters from `Stats()`.
+
+
+
+### Tests din afar frantei:
+Aldi, Dublin -> Trinity College Dublin, Dublin 
+
+Grand Place, Brussels, Belgium -> Parc du Cinquantenaire, Brussels, Belgium
+
+Rue de l'Ecuyer 19, Brussels -> Galeries Royales Saint-Hubert, Brussels
+
+Placa del Doctor Torrens, Valencia, Spain -> Centro de Especialidades El Grao, Valencia, Spain
+
