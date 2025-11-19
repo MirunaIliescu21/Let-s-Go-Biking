@@ -16,6 +16,7 @@ namespace RoutingServiceREST.Services
         {
             using (var proxy = _factory.Create())
             {
+                /* URL with no preference due to GET Directions API limitations */
                 string url =
                 $"https://api.openrouteservice.org/v2/directions/{profile}" +
                 $"?start={toStr(from.Lon)},{toStr(from.Lat)}&end={toStr(to.Lon)},{toStr(to.Lat)}";

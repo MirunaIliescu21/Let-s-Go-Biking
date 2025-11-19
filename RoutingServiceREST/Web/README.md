@@ -1014,7 +1014,43 @@ Aldi, Dublin -> Trinity College Dublin, Dublin
 
 Grand Place, Brussels, Belgium -> Parc du Cinquantenaire, Brussels, Belgium
 
-Rue de l'Ecuyer 19, Brussels -> Galeries Royales Saint-Hubert, Brussels
+Rue de l'Ecuyer 19, Bruxelles -> Galeries Royales Saint-Hubert, Bruxelles
 
 Placa del Doctor Torrens, Valencia, Spain -> Centro de Especialidades El Grao, Valencia, Spain
 
+Madrid -> Lyon ferry
+
+
+
+
+
+### **Routing limitations of the GET Directions API**
+
+This project uses the **OpenRouteService Directions API (GET)** to compute walking and cycling routes:
+
+```
+https://api.openrouteservice.org/v2/directions/{profile}?start={lon,lat}&end={lon,lat}
+```
+
+The GET endpoint **only supports start/end coordinates** and does **not accept advanced routing options**, such as:
+
+* avoiding ferries
+* custom route preferences
+* restricting certain road types
+* advanced routing features (`options.avoid_features`)
+
+Because of this limitation, for **very long inter-city trips**, the default ORS engine may select a ferry route if it is considered the shortest option (e.g., Madrid → Lyon).
+
+
+To gain full control over the routing behavior, the project can later switch to the **POST** Directions API.
+The POST version supports JSON request bodies and allows configuring advanced options like:
+
+```json
+{
+  "coordinates": [[lon, lat], [lon, lat]],
+  "preference": "fastest",
+  "options": {
+    "avoid_features": ["ferries"]
+  }
+}
+```
