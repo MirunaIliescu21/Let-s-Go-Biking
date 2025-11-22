@@ -19,7 +19,7 @@ namespace NotificationService
 
         static void Main(string[] args)
         {
-            // Conectare la ActiveMQ local
+            // Connect to the ActiveMQ broker
             var factory = new ConnectionFactory("tcp://localhost:61616");
 
             using (var connection = factory.CreateConnection("admin", "admin"))
@@ -27,7 +27,7 @@ namespace NotificationService
                 connection.Start();
                 using (var session = connection.CreateSession(AcknowledgementMode.AutoAcknowledge))
                 {
-                    // Topic-uri JMS
+                    // 3 topics for the 3 types of notifications
                     IDestination meteoTopic = session.GetTopic("meteo");
                     IDestination pollutionTopic = session.GetTopic("pollution");
                     IDestination bikesTopic = session.GetTopic("bikes");
@@ -57,7 +57,7 @@ namespace NotificationService
                                     break;
                             }
 
-                            Thread.Sleep(5000); // un eveniment la 5 secunde
+                            Thread.Sleep(5000); // an event every 5 seconds
                         }
                     }
                 }
@@ -71,7 +71,7 @@ namespace NotificationService
                 Type = "meteo",
                 Severity = RandomSeverity(),
                 Message = "Short-term rain expected on your route.",
-                Lat = 43.604652,  // Toulouse
+                Lat = 43.604652,  // Toulouse (only for initial testing without associating with the current itinerary)
                 Lon = 1.444209,
                 Timestamp = DateTime.UtcNow
             };
@@ -86,7 +86,7 @@ namespace NotificationService
                 Type = "pollution",
                 Severity = RandomSeverity(),
                 Message = "High pollution level detected downtown.",
-                Lat = 45.764043,  // Lyon
+                Lat = 45.764043,  // Lyon (only for initial testing without associating with the current itinerary)
                 Lon = 4.835659,
                 Timestamp = DateTime.UtcNow
             };
