@@ -873,92 +873,6 @@ The Debug flag only adds developer-oriented information such as the top 3 candid
 
 
 
-## Real-Time Notifications (ActiveMQ + STOMP)
-
-This feature simulates external real-time events (weather, pollution, bike availability) and delivers them to the web front-end while the user is viewing an itinerary.
-
-### How it works
-
-**1. NotificationService (C# producer)**
-A separate console application runs alongside the main system.
-It periodically generates *fake but realistic* events such as:
-
-* heavy rain or strong wind (meteo)
-* high pollution levels
-* low number of bikes at nearby stations
-
-Each event contains:
-
-* a **type** (`meteo`, `pollution`, `bikes`)
-* a **severity** (`info`, `warning`, `danger`)
-* a **message**
-* optional map coordinates (`Lat`, `Lon`)
-* a timestamp
-
-These events are serialized as JSON and published to **ActiveMQ topics** (`/topic/meteo`, `/topic/pollution`, `/topic/bikes`).
-
-
-**2. ActiveMQ (Message Broker)**
-ActiveMQ runs as a standalone broker and routes the events to any connected web clients.
-Communication uses **STOMP over WebSocket** (`ws://localhost:61614/stomp`).
-
-
-
-**3. Front-end (JavaScript STOMP consumer)**
-The web app connects to ActiveMQ using the STOMP protocol.
-The user can choose which topics they are interested in:
-
-* Meteo
-* Pollution
-* Bikes
-
-When a checkbox is checked/unchecked, the client subscribes/unsubscribes from the corresponding topic in real time.
-
-Incoming events are displayed in the **“Real-time events”** panel:
-
-* each item shows `[TYPE] message` with a color based on severity
-
-  * blue = info
-  * yellow = warning
-  * red = danger
-* events appear instantly as they are produced
-* older events remain in the list; new ones appear at the top
-* only the topics selected by the user are shown
-
-If the event contains coordinates, a small marker is also placed on the map.
-
-
-### Summary
-
-* **NotificationService** simulates external meteo/pollution/bike alerts.
-* **ActiveMQ** distributes these alerts to subscribers through topics.
-* The **frontend** listens via STOMP, allows topic selection, and displays colored real-time notifications.
-* This fully meets the project requirement of integrating asynchronous, real-time external information into the client UX.
-
-
-###  Real-Time Alerts Linked to the Current Itinerary
-
-In addition to receiving real-time simulated events through ActiveMQ, the web front-end contextually places each alert on the map based on the user’s **current itinerary**:
-
-* **Meteo alerts** are placed near the *origin* of the current route
-* **Pollution alerts** are placed near the *destination*
-* **Bike availability alerts** are placed near the *selected bike stations* (pickup or dropoff).
-  When no station information is available, the alert is placed at the **midpoint** of the route as a fallback.
-  This ensures they still appear on the map without requiring additional station data.
-
-Each alert is displayed in the “Real-time events” panel with a severity color (blue, yellow, red), and a corresponding marker is added on the map. Clicking a notification centers the map on the alert location.
-
-This makes alerts feel dynamic and directly related to the user's current trip, while still using the fake notification producer.
-
-```
-Origin ---- (BikeFrom Station) ---- (BikeTo Station) ---- Destination
-   ↑             ↑                       ↑                   ↑
- METEO        BIKES                  BIKES               POLLUTION
-```
-
-Real-time alerts are *started manually* from the front-end via a “Start alerts” button, which connects to ActiveMQ over STOMP and begins receiving events only when the user is ready.
-
-
 ## Heavy SOAP client (Java) – `ProxyCacheJavaClient`
 
 This module is a standalone Maven project that acts as a **heavy SOAP client** for the C# `ProxyCacheService`.  
@@ -1008,6 +922,61 @@ The goal is to consume the WCF SOAP service from Java, without re-implementing a
    - the evolving `hits` / `misses` counters from `Stats()`.
 
 
+## 🗺️ Displaying a World Map in Java (Bonus Feature)
+
+To enhance the usability of the SOAP client, we implemented a **Java desktop map viewer**
+based on **JXMapViewer2**, a Swing component rendering OpenStreetMap tiles.
+
+Although the feature is optional in the course requirements, it provides **bonus points**
+for a high-quality visual representation of itineraries.
+
+### ✔ Implemented Functionality
+
+* Integration with **JXMapViewer2** to display OpenStreetMap tiles inside a Swing window
+* A simple UI allowing the user to input:
+
+  * Origin address
+  * Destination address
+* The Java client invokes the **RoutingServiceREST** endpoint
+  (`/itinerary`) to retrieve a full bike/walk itinerary
+* The response contains detailed route geometry:
+
+  * `Walk1Coords`
+  * `BikeCoords`
+  * `Walk2Coords`
+  * Or full segment data in `Segments[]` with metadata
+* The map dynamically renders:
+
+  * **Walking segments** as gray **dashed** polylines
+  * **Biking segments** as green **continuous** polylines
+  * Start point marker (green)
+  * Destination marker (red)
+* **Adaptive zoom**:
+
+  * Zooms in for short city routes
+  * Zooms out for long routes (e.g., Paris → Lyon)
+
+### 🖼️ Result
+
+The final Java viewer displays the full itinerary on top of OpenStreetMap tiles,
+with styling matching the main web frontend (walking vs biking), providing
+a clean and intuitive visualization — exactly what the bonus specification suggests.
+
+---
+
+## Conclusion
+
+The Heavy SOAP client and Java map viewer together form a complete, robust extension
+to the core project.
+The SOAP client demonstrates WSDL-based interoperability, while the map viewer provides
+a polished visualization layer for the computed bike itineraries.
+
+Both components exceed the expected requirements and showcase strong integration between
+Java, SOAP, REST, and mapping technologies.
+
+
+
+
 
 ### Tests din afar frantei:
 Aldi, Dublin -> Trinity College Dublin, Dublin 
@@ -1054,3 +1023,133 @@ The POST version supports JSON request bodies and allows configuring advanced op
   }
 }
 ```
+
+
+
+## Real-Time Notifications (ActiveMQ + STOMP, SOAP Integration, JCDecaux Data)
+
+This feature adds live external-style alerts (weather, pollution, bike availability) to the front-end while the user is viewing an itinerary. It combines:
+
+- a standalone **C# notification producer**,  
+- SOAP calls to the **ProxyCacheService**,  
+- real station data from the **JCDecaux bikes REST API**,  
+- **ActiveMQ topics**,  
+- and a **JavaScript STOMP client** in the browser.
+
+---
+
+### 1. NotificationService (C# Producer with Real JCDecaux Data)
+
+`NotificationService` is a separate console application that periodically sends three event types:
+
+- **meteo** – short-term weather alerts  
+- **pollution** – air quality alerts  
+- **bikes** – real JCDecaux bike availability alerts  
+
+For **BIKES**, the system does *not* use fake numbers. Instead, it:
+
+1. Calls the **ProxyCacheService** via SOAP (`ProxyServiceClient` autogenerated from the WSDL).
+2. Invokes `GetJcdecauxStationsGeneric(contract, ttl)` to fetch and cache JCDecaux station data.
+3. Parses the JSON station list.
+4. Randomly picks one JCDecaux station.
+5. Extracts:
+   - number of available bikes
+   - number of available stands
+   - the station name
+   - **real station coordinates** (`lat`, `lng`)
+6. Determines severity (`info`, `warning`, `danger`) based on availability.
+7. Sends a JSON event to `/topic/bikes`, including:
+   - station name
+   - bikes / stands
+   - severity level
+   - **lat/lon** coordinates for map display
+   - timestamp
+
+All events are published to ActiveMQ:
+
+- `/topic/meteo`
+- `/topic/pollution`
+- `/topic/bikes`
+
+#### JCDecaux contract is configurable
+
+The JCDecaux city used for alerts is set in `NotificationService`’s `App.config`:
+
+```xml
+<appSettings>
+    <add key="ALERT_CONTRACT" value="toulouse" />
+</appSettings>
+````
+
+Changing this value (e.g., `lyon`, `bruxelles`) instantly changes the city whose bike alerts are monitored — without touching the code.
+
+---
+
+### 2. ActiveMQ (Message Broker)
+
+ActiveMQ is used as the transport layer for all notifications.
+Messages are sent as JSON over **STOMP via WebSocket**:
+
+```
+ws://localhost:61614/stomp
+```
+
+* `NotificationService` → publishes messages
+* the Front-End → subscribes in real time
+
+---
+
+### 3. Web Front-End (JavaScript STOMP Client + Leaflet Map)
+
+The browser connects to ActiveMQ using a JavaScript STOMP client.
+
+The UI lets the user enable/disable subscriptions to:
+
+* Meteo
+* Pollution
+* Bikes
+
+Incoming events appear instantly in the **“Real-time events”** list, with severity-based colors:
+
+* **blue** → info
+* **yellow** → warning
+* **red** → danger
+
+Each event is also shown on the map:
+
+#### • METEO
+
+Displayed near the **route origin**.
+
+#### • POLLUTION
+
+Displayed near the **route destination**.
+
+#### • BIKES
+
+If the event contains `Lat`/`Lon` (real JCDecaux station coordinates),
+the marker is placed **exactly at that station**.
+
+If coordinates are missing (edge cases), the system falls back to:
+
+* bike pickup station,
+* or bike dropoff station,
+* or midpoint between origin and destination.
+
+Clicking any alert in the list recenters the map on the corresponding marker.
+
+---
+
+### Summary
+
+* **NotificationService** produces real-time meteo/pollution alerts and *real JCDecaux bike availability alerts*.
+* **ProxyCacheService** provides JCDecaux data over SOAP, with caching.
+* **ActiveMQ** distributes events using STOMP/WebSocket.
+* **Front-end**:
+
+  * subscribes to selected topics,
+  * displays colored notifications,
+  * and places alert markers on the map based on the current itinerary or real station coordinates.
+* The monitored **JCDecaux contract is configurable** in `NotificationService` (`ALERT_CONTRACT`), making the system reusable for any city.
+
+* Real-time alerts are *started manually* from the front-end via a **“Start alerts” button**, which connects to ActiveMQ over STOMP and begins receiving events only when the user is ready.

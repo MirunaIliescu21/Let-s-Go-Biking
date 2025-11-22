@@ -11,6 +11,9 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProxyCacheService", "ProxyCacheService\ProxyCacheService.csproj", "{499AC2F4-34AA-454B-8AA6-DB319AE351CD}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NotificationService", "NotificationService\NotificationService.csproj", "{4145A091-F3E0-4E61-87B8-5B90E5E5434C}"
+	ProjectSection(ProjectDependencies) = postProject
+		{499AC2F4-34AA-454B-8AA6-DB319AE351CD} = {499AC2F4-34AA-454B-8AA6-DB319AE351CD}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

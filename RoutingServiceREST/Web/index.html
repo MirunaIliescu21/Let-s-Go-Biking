@@ -638,8 +638,15 @@
       let lat = null
       let lon = null;
 
-      // If we have a current route, determine coordinates based on event type
-      if (currentRoute) {
+      const evLat = evt.lat ?? evt.Lat;
+      const evLon = evt.lon ?? evt.Lon;
+
+      if (type === "BIKES" && typeof evLat === "number" && typeof evLon === "number") {
+        // Pentru BIKES, dacă evenimentul are coordonate reale, le folosim
+        lat = evLat;
+        lon = evLon;
+      } else if (currentRoute) {
+        // Altfel (sau pentru METEO/POLLUTION), folosim fallback pe rută
         if (type === "METEO") {
           // weather near origin
           lat = currentRoute.OriginResolvedLat;
@@ -649,7 +656,7 @@
           lat = currentRoute.DestResolvedLat;
           lon = currentRoute.DestResolvedLon;
         } else if (type === "BIKES") {
-          // bikes near bike station if possible, otherwise in the middle of the route
+          // BIKES fără coordonate în event → aceeași logică veche
           const from = currentRoute.BikeFromTop3?.find(x => x.Name === currentRoute.BikeFrom);
           const to   = currentRoute.BikeToTop3?.find(x => x.Name === currentRoute.BikeTo);
 
@@ -660,20 +667,48 @@
             lat = to.Lat;
             lon = to.Lon;
           } else if (currentRoute.OriginResolvedLat && currentRoute.DestResolvedLat) {
-            // fallback: middle of the Origin–Destination segment            
             lat = (currentRoute.OriginResolvedLat + currentRoute.DestResolvedLat) / 2;
             lon = (currentRoute.OriginResolvedLon + currentRoute.DestResolvedLon) / 2;
           }
         }
-      } else {
-        // No current route: try to get coordinates directly from the event (hardcoded)
-        const evLat = evt.lat ?? evt.Lat;
-        const evLon = evt.lon ?? evt.Lon;
-        if (typeof evLat === "number" && typeof evLon === "number") {
-          lat = evLat;
-          lon = evLon;
-        }
       }
+
+      // // If we have a current route, determine coordinates based on event type
+      // if (currentRoute) {
+      //   if (type === "METEO") {
+      //     // weather near origin
+      //     lat = currentRoute.OriginResolvedLat;
+      //     lon = currentRoute.OriginResolvedLon;
+      //   } else if (type === "POLLUTION") {
+      //     // pollution near destination
+      //     lat = currentRoute.DestResolvedLat;
+      //     lon = currentRoute.DestResolvedLon;
+      //   } else if (type === "BIKES") {
+      //     // bikes near bike station if possible, otherwise in the middle of the route
+      //     const from = currentRoute.BikeFromTop3?.find(x => x.Name === currentRoute.BikeFrom);
+      //     const to   = currentRoute.BikeToTop3?.find(x => x.Name === currentRoute.BikeTo);
+
+      //     if (from) {
+      //       lat = from.Lat;
+      //       lon = from.Lon;
+      //     } else if (to) {
+      //       lat = to.Lat;
+      //       lon = to.Lon;
+      //     } else if (currentRoute.OriginResolvedLat && currentRoute.DestResolvedLat) {
+      //       // fallback: middle of the Origin–Destination segment            
+      //       lat = (currentRoute.OriginResolvedLat + currentRoute.DestResolvedLat) / 2;
+      //       lon = (currentRoute.OriginResolvedLon + currentRoute.DestResolvedLon) / 2;
+      //     }
+      //   }
+      // } else {
+      //   // No current route: try to get coordinates directly from the event (hardcoded)
+      //   const evLat = evt.lat ?? evt.Lat;
+      //   const evLon = evt.lon ?? evt.Lon;
+      //   if (typeof evLat === "number" && typeof evLon === "number") {
+      //     lat = evLat;
+      //     lon = evLon;
+      //   }
+      // }
 
       // if we have coordinates, put a marker on the map
       if (typeof lat === "number" && typeof lon === "number") {
