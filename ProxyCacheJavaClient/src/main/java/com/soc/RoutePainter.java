@@ -9,7 +9,7 @@ import java.awt.geom.Point2D;
 import java.util.List;
 
 /**
- * Draw a route on the map (Paris -> Lyon) + markers for origin/destination.
+ * Draw a route on the map + markers for origin/destination.
  */
 public class RoutePainter implements Painter<JXMapViewer> {
 
