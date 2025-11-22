@@ -9,16 +9,11 @@ import javax.swing.*;
 import java.awt.*;
 import java.util.List;
 
-/**
- * Harta + formular Origin/Destination + traseu calculat de RoutingServiceREST.
- */
 public class MapViewerApp {
 
     public static void main(String[] args) {
-
-        // User-Agent necesar pentru OpenStreetMap
+        // User-Agent required for OpenStreetMap
         System.setProperty("http.agent", "MyJavaMapClient/1.0");
-
         SwingUtilities.invokeLater(MapViewerApp::createAndShowUI);
     }
 
@@ -27,7 +22,7 @@ public class MapViewerApp {
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setSize(1200, 800);
 
-        // ====== Map viewer ======
+        // Map
         JXMapViewer mapViewer = new JXMapViewer();
 
         TileFactoryInfo info = new TileFactoryInfo(
@@ -47,14 +42,12 @@ public class MapViewerApp {
         tileFactory.setUserAgent("MyJavaMapClient/1.0");
         mapViewer.setTileFactory(tileFactory);
 
-        // Un centru default (Franta) pana facem primul request
         mapViewer.setAddressLocation(new GeoPosition(46.5, 2.5));
         mapViewer.setZoom(11);
 
-        // ====== Panel de control (origin/destination) ======
+        // Controls
         JTextField originField = new JTextField("Place du Capitole, Toulouse", 30);
         JTextField destField   = new JTextField("Gare Matabiau, Toulouse", 30);
-
         JButton getItineraryButton = new JButton("Get itinerary");
 
         JPanel controlPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
@@ -64,54 +57,49 @@ public class MapViewerApp {
         controlPanel.add(destField);
         controlPanel.add(getItineraryButton);
 
-        // ====== Acțiunea butonului ======
         getItineraryButton.addActionListener(e -> {
             String origin = originField.getText().trim();
             String destination = destField.getText().trim();
 
             if (origin.isEmpty() || destination.isEmpty()) {
                 JOptionPane.showMessageDialog(frame,
-                        "Te rog să completezi Origin și Destination.",
+                        "Please complete Origin and Destination.",
                         "Input missing",
                         JOptionPane.WARNING_MESSAGE);
                 return;
             }
 
-            // Ca să nu blocăm UI-ul, folosim un SwingWorker (thread în fundal)
             getItineraryButton.setEnabled(false);
             getItineraryButton.setText("Loading...");
 
-            new SwingWorker<List<GeoPosition>, Void>() {
+            new SwingWorker<List<RouteSegment>, Void>() {
                 @Override
-                protected List<GeoPosition> doInBackground() throws Exception {
-                    return RoutingRestClient.fetchRoute(origin, destination);
+                protected List<RouteSegment> doInBackground() throws Exception {
+                    return RoutingRestClient.fetchSegments(origin, destination);
                 }
 
                 @Override
                 protected void done() {
                     try {
-                        List<GeoPosition> track = get();
-
-                        if (track.isEmpty()) {
+                        List<RouteSegment> segments = get();
+                        if (segments.isEmpty()) {
                             JOptionPane.showMessageDialog(frame,
-                                    "Nu am primit niciun punct de rută de la server.",
+                                    "We did not receive any route segments from the server.",
                                     "No route",
                                     JOptionPane.INFORMATION_MESSAGE);
                             return;
                         }
 
-                        // Setăm painter-ul pentru noua rută
-                        RoutePainter routePainter = new RoutePainter(track);
-                        mapViewer.setOverlayPainter(routePainter);
+                        // Painter with walk/bike style
+                        SegmentedRoutePainter painter = new SegmentedRoutePainter(segments);
+                        mapViewer.setOverlayPainter(painter);
 
-                        // Centru + zoom adaptiv
-                        centerAndZoom(mapViewer, track);
-
+                        centerAndZoom(mapViewer, segments);
                         mapViewer.repaint();
                     } catch (Exception ex) {
                         ex.printStackTrace();
                         JOptionPane.showMessageDialog(frame,
-                                "Eroare la obținerea itinerariului:\n" + ex.getMessage(),
+                                "Error getting itinerary:\n" + ex.getMessage(),
                                 "REST error",
                                 JOptionPane.ERROR_MESSAGE);
                     } finally {
@@ -122,7 +110,6 @@ public class MapViewerApp {
             }.execute();
         });
 
-        // ====== Layout general ======
         frame.setLayout(new BorderLayout());
         frame.add(controlPanel, BorderLayout.NORTH);
         frame.add(mapViewer, BorderLayout.CENTER);
@@ -130,28 +117,36 @@ public class MapViewerApp {
         frame.setVisible(true);
     }
 
-    /**
-     * Centrează harta pe ruta dată și alege un zoom adaptiv în funcție de distanță.
-     */
-    private static void centerAndZoom(JXMapViewer mapViewer, List<GeoPosition> track) {
-        // bounding box
+    private static void centerAndZoom(JXMapViewer mapViewer, List<RouteSegment> segments) {
         double minLat = Double.POSITIVE_INFINITY, maxLat = Double.NEGATIVE_INFINITY;
         double minLon = Double.POSITIVE_INFINITY, maxLon = Double.NEGATIVE_INFINITY;
 
-        for (GeoPosition gp : track) {
-            minLat = Math.min(minLat, gp.getLatitude());
-            maxLat = Math.max(maxLat, gp.getLatitude());
-            minLon = Math.min(minLon, gp.getLongitude());
-            maxLon = Math.max(maxLon, gp.getLongitude());
+        GeoPosition start = null;
+        GeoPosition end = null;
+
+        for (RouteSegment seg : segments) {
+            for (GeoPosition gp : seg.getPoints()) {
+                minLat = Math.min(minLat, gp.getLatitude());
+                maxLat = Math.max(maxLat, gp.getLatitude());
+                minLon = Math.min(minLon, gp.getLongitude());
+                maxLon = Math.max(maxLon, gp.getLongitude());
+            }
+            if (start == null && !seg.getPoints().isEmpty()) {
+                start = seg.getPoints().getFirst();
+            }
+            if (!seg.getPoints().isEmpty()) {
+                end = seg.getPoints().getLast();
+            }
+        }
+
+        if (start == null || end == null) {
+            return;
         }
 
         double centerLat = (minLat + maxLat) / 2.0;
         double centerLon = (minLon + maxLon) / 2.0;
         mapViewer.setAddressLocation(new GeoPosition(centerLat, centerLon));
 
-        // distanta aproximativa intre primul si ultimul punct (km)
-        GeoPosition start = track.get(0);
-        GeoPosition end = track.get(track.size() - 1);
         double distKm = haversineKm(start.getLatitude(), start.getLongitude(),
                 end.getLatitude(), end.getLongitude());
 
@@ -159,26 +154,18 @@ public class MapViewerApp {
         mapViewer.setZoom(zoom);
     }
 
-    /**
-     * Heuristica pentru zoom, bazata pe distanta aproximativa a rutei.
-     * Atentie: in configuratia noastra, un numar MAI MARE inseamna zoom MAI DEPARTE
-     * (din cauza inversarii pentru OpenStreetMap), deci:
-     *  - trasee scurte -> numar mic
-     *  - trasee lungi  -> numar mare
-     */
     private static int chooseZoomFromDistanceKm(double distKm) {
         if (distKm < 3) {
-            return 2;   // traseu foarte scurt in oras (ex: Capitole -> Matabiau)
+            return 2;
         } else if (distKm < 50) {
-            return 7;   // traseu mediu (prin oras / intre orase apropiate)
+            return 7;
         } else {
-            return 11;  // traseu lung (gen Paris -> Lyon)
+            return 11;
         }
     }
 
-    // Distanta Haversine intre doua coordonate (in km)
     private static double haversineKm(double lat1, double lon1, double lat2, double lon2) {
-        double R = 6371.0; // raza Pamantului in km
+        double R = 6371.0;
         double dLat = Math.toRadians(lat2 - lat1);
         double dLon = Math.toRadians(lon2 - lon1);
         double a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
