@@ -29,7 +29,8 @@ This README describes:
 1. [Solution Overview](#solution-overview)  
 2. [Repository Structure](#repository-structure)  
 3. [Architecture](#architecture)  
-4. [How to Run (Development Mode)](#how-to-run-development-mode)  
+4. [Self-Hosting Architecture and Execution](#self-hosting-architecture-and-execution)  
+   - [How to Run the Application](#how-to-run-the-application-self-hosted)  
 5. [RoutingServiceREST](#routingservicerest)  
    - [Routing Logic](#routing-logic)  
    - [Project Structure](#routingservicerest-project-structure)  
@@ -37,9 +38,9 @@ This README describes:
 7. [Real-Time Notifications (NotificationService + ActiveMQ)](#real-time-notifications-notificationservice--activemq)  
 8. [Web Front-End (Leaflet + STOMP)](#web-front-end-leaflet--stomp)  
 9. [Java Heavy SOAP Client & Map Viewer](#java-heavy-soap-client--map-viewer)  
-10. [Test Cases](#test-cases)  
-11. [Routing Limitations of ORS GET Directions](#routing-limitations-of-ors-get-directions)  
-12. [Known Limitations & Future Work](#known-limitations--future-work)  
+10. [Routing Limitations of ORS GET Directions](#routing-limitations-of-ors-get-directions) 
+11. [Test Cases](#test-cases)  
+
 
 ---
 
@@ -173,123 +174,168 @@ Java Map Viewer                  |  (REST)    |
 * The **web front-end** subscribes via **STOMP** and overlays alerts on the map.
 * The **Java heavy client** consumes the SOAP proxy and the REST routing service, and displays routes on a JXMapViewer map.
 
+
 ---
 
-## How to Run (Development Mode)
+## Self-Hosting Architecture and Execution
 
-> Self-hosting (Console .exe) is planned as a next step.
-> For now, services are hosted as WCF Service Libraries in Visual Studio, which greatly simplifies debugging. 
+This project fully supports **self-hosted execution**, where all backend servers run as standalone executables (without Visual Studio).  
+To achieve this cleanly, two lightweight Console App hosts were added:
 
-### 1. Prerequisites
+- `ProxyCacheService.SelfHost`
+- `RoutingServiceREST.SelfHost`
 
-* **Visual Studio 2022** or later, with .NET Framework / WCF tools
-* **.NET Framework** (version used by the solution)
-* **ActiveMQ** running locally
+The original WCF Service Library projects remain unchanged.  
+They still contain all routing, caching, geocoding, and JCDecaux logic — and can be debugged normally in Visual Studio.  
+The SelfHost apps simply provide a minimal, clean hosting layer that starts the services.
 
-  * Default STOMP endpoint: `ws://localhost:61614/stomp`
-* **Node.js** or **VS Code Live Server** (for serving `index.html`)
-* **IntelliJ IDEA** (or any IDE with Maven support) for the Java client
-* Valid API keys:
+### Why this approach?
+- **Services can run directly as executables** (required for demo/exam).  
+- **Debugging remains untouched** — development still happens in the WCF projects.  
+- **Architecture stays clean**:  
+  - WCF libraries = service logic  
+  - SelfHost apps = hosting + configuration  
+- **No risk of breaking the working implementation.**
 
-  * [JCDecaux VLS](https://developer.jcdecaux.com)
-  * [OpenRouteService](https://openrouteservice.org)
+This approach gives the best of both worlds.
 
-### 2. Configure API Keys
+---
 
-In `ProxyCacheService/App.config`:
+### `ProxyCacheService.SelfHost`
 
-```xml
-<appSettings>
-  <add key="JCDECAUX_API_KEY" value="MY_JCDECAUX_KEY"/>
-  <add key="ORS_API_KEY"       value="MY_ORS_KEY"/>
-</appSettings>
+This console app:
+
+- creates a `ServiceHost` for `ProxyService`
+- applies a `BasicHttpBinding`
+- adds SOAP + MEX endpoints
+- loads API keys from `App.config`
+- listens at:
+
+```
+http://localhost:8734/Design_Time_Addresses/ProxyCacheService/Service1/
+
 ```
 
-### 3. Start ActiveMQ
+---
 
-1. Start ActiveMQ locally.
-2. Confirm that STOMP/WebSocket is available at:
-   `ws://localhost:61614/stomp`
+### `RoutingServiceREST.SelfHost`
 
-### 4. Start ProxyCacheService (SOAP)
+This console app:
 
-1. Open `RoutingServiceREST.sln` in Visual Studio.
-2. Right-click **ProxyCacheService** → *Set as Startup Project* (or start “new instance” later).
-3. Press **F5**.
-   Visual Studio will host the WCF service using *WCF Service Host*.
+- creates a `WebServiceHost` for `RoutingService`
+- configures a `WebHttpBinding` (REST + JSON)
+- attaches `WebHttpBehavior`
+- enables debugging details
+- listens at:
 
-Default development URL :
+```
+http://localhost:8733/Design_Time_Addresses/RoutingServiceREST/Service1/
 
-* `http://localhost:8734/Design_Time_Addresses/ProxyCacheService/ProxyService/`
-
-You can verify with **WCF Test Client** that operations such as `GetWithMeta` and `GetJcdecauxStationsGeneric` work.
-
-### 5. Start RoutingServiceREST (REST)
-
-1. Right-click **RoutingServiceREST** → *Set as Startup Project*.
-2. Press **F5** again (or start a second instance while ProxyCacheService is still running).
-
-Example base URL:
-
-* `http://localhost:8733/Design_Time_Addresses/RoutingServiceREST/Service1/`
-
-Endpoints:
-
-* `POST /itinerary`
-* `GET /contracts`
-* `GET /stations?contract={name}`
-* `GET /ping`
-* `OPTIONS /itinerary` (for CORS preflight)
-
-You can test with **Postman** by sending a `POST` request to `/itinerary` with a JSON body (examples in the [Routing Logic](#routing-logic) section).
-
-### 6. Start NotificationService (ActiveMQ Producer)
-
-1. Set **NotificationService** as startup project.
-2. Configure its `App.config`:
-
-```xml
-<appSettings>
-  <add key="ALERT_CONTRACT" value="toulouse" />
-</appSettings>
 ```
 
-(`ALERT_CONTRACT` controls which JCDecaux city is used for bike alerts.)
+---
 
-3. Run the console app. It will:
+### Output (Generated Executables)
 
-   * connect to ActiveMQ,
-   * periodically fetch stations via ProxyCacheService,
-   * send JSON messages to topics:
+After building the solution, the following executables are created:
 
-     * `/topic/meteo`
-     * `/topic/pollution`
-     * `/topic/bikes`
+```
+ProxyCacheService.SelfHost/bin/Debug/ProxyCacheService.SelfHost.exe
+RoutingServiceREST.SelfHost/bin/Debug/RoutingServiceREST.SelfHost.exe
+```
 
-### 7. Start the Web Front-End
+These run independently of Visual Studio.
 
-1. Open `RoutingServiceREST/Web/index.html` in VS Code.
+---
 
-2. Use **Live Server** (or any static HTTP server) to serve it, e.g.:
+### URL ACL Registration (one-time setup)
 
-   * `http://127.0.0.1:5500/index.html`
+Windows does not allow services to bind to HTTP prefixes unless permitted.  
+Therefore, these commands were executed once in an elevated CMD:
 
-3. In the UI:
+```bat
+netsh http add urlacl url=http://+:8734/Design_Time_Addresses/ProxyCacheService/Service1/ user=ecomputer
+netsh http add urlacl url=http://+:8733/Design_Time_Addresses/RoutingServiceREST/Service1/ user=ecomputer
+```
 
-   * enter origin/destination,
-   * click **Get itinerary**,
-   * optionally click **Start alerts** to connect to ActiveMQ and receive notifications.
+This permanently authorizes the user `ecomputer` to run both servers.
 
-### 8. Start the Java Heavy SOAP Client (Optional)
+---
 
-1. Open the `ProxyCacheJavaClient` folder in IntelliJ.
-2. Ensure **Maven** has downloaded dependencies and the generated sources are available under `target/generated-sources/jaxws`.
-3. Run:
+### Automated Startup & Shutdown Scripts
 
-   * `TestProxyClient` — to test the SOAP cache behavior (MISS/HIT, Stats, Evict).
-   * `MapViewerApp` — to open the world map and draw itineraries retrieved from `RoutingServiceREST`.
+Three utility scripts were added at the solution root:
 
-Make sure that **ProxyCacheService** and **RoutingServiceREST** are running before launching Java clients.
+#### `start_all.bat`
+
+Starts:
+
+* ProxyCacheService (SOAP)
+* RoutingServiceREST (REST)
+* NotificationService (ActiveMQ alerts)
+
+Each opens in its own console window.
+
+#### `start_frontend.bat`
+
+Launches the front-end:
+
+* starts a lightweight Python HTTP server
+* automatically opens:
+
+```
+http://localhost:5500/index.html
+```
+
+#### `stop_all.bat`
+
+Stops all backend processes using `taskkill`.
+
+---
+
+## How to Run the Application (Self-Hosted)
+
+After URL ACL setup, running the full system is very simple:
+
+### **1. Start backend services**
+
+```
+start_all.bat
+```
+
+### **2. Start the front-end**
+
+```
+start_frontend.bat
+```
+
+Browser opens automatically at:
+
+```
+http://localhost:5500/index.html
+```
+
+### **3. Use the application normally**
+
+* pick origin/destination
+* view walking / bike plan
+* receive realtime notifications
+* compare with Java heavy client
+
+### **4. Stop all backend services**
+
+```
+stop_all.bat
+```
+---
+
+## Summary
+
+* Clean separation between service logic and hosting logic
+* Visual Studio debugging stays fully intact
+* Executables allow independent runtime without VS
+* Scripts automate the entire workflow
+* Architecture mirrors real WCF deployment patterns
 
 ---
 

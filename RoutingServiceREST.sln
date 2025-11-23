@@ -15,6 +15,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NotificationService", "Noti
 		{499AC2F4-34AA-454B-8AA6-DB319AE351CD} = {499AC2F4-34AA-454B-8AA6-DB319AE351CD}
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProxyCacheService.SelfHost", "ProxyCacheService.SelfHost\ProxyCacheService.SelfHost.csproj", "{570020CB-573C-45D2-AD38-AB7D80AB8422}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RoutingServiceREST.SelfHost", "RoutingServiceREST.SelfHost\RoutingServiceREST.SelfHost.csproj", "{803CCD17-0738-4ED0-A374-EACC4603AEEC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +37,14 @@ Global
 		{4145A091-F3E0-4E61-87B8-5B90E5E5434C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4145A091-F3E0-4E61-87B8-5B90E5E5434C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4145A091-F3E0-4E61-87B8-5B90E5E5434C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{570020CB-573C-45D2-AD38-AB7D80AB8422}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{570020CB-573C-45D2-AD38-AB7D80AB8422}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{570020CB-573C-45D2-AD38-AB7D80AB8422}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{570020CB-573C-45D2-AD38-AB7D80AB8422}.Release|Any CPU.Build.0 = Release|Any CPU
+		{803CCD17-0738-4ED0-A374-EACC4603AEEC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{803CCD17-0738-4ED0-A374-EACC4603AEEC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{803CCD17-0738-4ED0-A374-EACC4603AEEC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{803CCD17-0738-4ED0-A374-EACC4603AEEC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
