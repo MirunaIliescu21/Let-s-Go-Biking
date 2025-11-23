@@ -10,13 +10,20 @@ namespace RoutingServiceREST.SelfHost
 {
     internal static class Program
     {
+        /// <summary>
+        /// Entry point for the self-hosted RoutingServiceREST.
+        /// This console app hosts the REST routing service on the same URL
+        /// that was previously configured in App.config.
+        /// At the same time, it still uses the WCF client configuration in App.config
+        /// to call the ProxyCacheService.
+        /// </summary>
         static void Main()
         {
             // Base address for the REST service.
             // It must match the address used previously in App.config and in the frontend.
             var baseAddress = new Uri("http://localhost:8733/Design_Time_Addresses/RoutingServiceREST/Service1/");
 
-            // WebHttp binding configuration (copied from LargeWebBinding in the original App.config)
+            // WebHttp binding configuration (equivalent to LargeWebBinding from the original App.config).
             var webBinding = new WebHttpBinding
             {
                 Name = "LargeWebBinding",
@@ -25,7 +32,7 @@ namespace RoutingServiceREST.SelfHost
                 MaxBufferPoolSize = 20000000
             };
 
-            // Reader quotas (must be assigned via a new instance)
+            // Reader quotas must be assigned via a new XmlDictionaryReaderQuotas instance
             webBinding.ReaderQuotas = new XmlDictionaryReaderQuotas
             {
                 MaxDepth = 64,
@@ -35,18 +42,20 @@ namespace RoutingServiceREST.SelfHost
                 MaxNameTableCharCount = 20000000
             };
 
+            // WebServiceHost is a specialized ServiceHost for REST (WebHttp)
+            // that makes it easier to configure WebHttpBehavior.
             using (var host = new WebServiceHost(typeof(RoutingService), baseAddress))
             {
                 try
                 {
-                    // Main REST endpoint
+                    // Main REST endpoint exposing IRoutingServiceREST at the base address.
                     var endpoint = host.AddServiceEndpoint(
                         typeof(IRoutingServiceREST),
                         webBinding,
-                        ""
+                        "" // empty relative address; exactly baseAddress
                     );
 
-                    // Enable REST/JSON behavior
+                    // Enable WebHttp behavior so the service understands REST/JSON requests.
                     var webBehavior = new WebHttpBehavior
                     {
                         HelpEnabled = true,
@@ -54,8 +63,6 @@ namespace RoutingServiceREST.SelfHost
                     };
                     endpoint.EndpointBehaviors.Add(webBehavior);
 
-                    // Ensure there is exactly one ServiceDebugBehavior,
-                    // because WebServiceHost may already contain one.
                     var debugBehavior = host.Description.Behaviors.Find<ServiceDebugBehavior>();
                     if (debugBehavior == null)
                     {
@@ -64,7 +71,7 @@ namespace RoutingServiceREST.SelfHost
                     }
                     debugBehavior.IncludeExceptionDetailInFaults = true;
 
-                    // Open the host and start the service
+                    // Open the host: the REST service starts listening for HTTP requests.
                     host.Open();
 
                     Console.WriteLine("RoutingServiceREST self-hosted at:");
@@ -76,11 +83,13 @@ namespace RoutingServiceREST.SelfHost
                     Console.WriteLine("Press ENTER to stop RoutingServiceREST...");
                     Console.ReadLine();
 
-                    // Clean shutdown
+                    // Stop the service
                     host.Close();
                 }
                 catch (Exception ex)
                 {
+                    // If anything goes wrong, print the full exception to the console.
+                    // This makes it easier to diagnose issues when running the .exe directly.
                     Console.WriteLine("Error starting RoutingServiceREST:");
                     Console.WriteLine(ex);
                     Console.WriteLine("Press ENTER to exit.");

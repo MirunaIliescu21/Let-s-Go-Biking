@@ -2,20 +2,26 @@
 using System.Configuration;
 using System.ServiceModel;
 using System.ServiceModel.Description;
-using ProxyCacheService; // namespace-ul în care ai ProxyService
+using ProxyCacheService; // Namespace that contains ProxyService and IProxyService
 
 namespace ProxyCacheService.SelfHost
 {
     internal static class Program
     {
+        /// <summary>
+        /// Entry point for the self-hosted ProxyCacheService.
+        /// This method creates a ServiceHost in code and exposes the SOAP service
+        /// on the same URL and binding that were previously configured in App.config.
+        /// </summary>
         static void Main()
         {
-            // Adresa de bază — FOARTE IMPORTANT:
-            // folosim EXACT aceeași ca în App.config-ul vechi,
-            // ca să nu fie nevoie să schimbi RoutingService și NotificationService.
+            // Base address of the SOAP service.
+            // It matches exactly the one used in the original WCF config,
+            // so existing clients (RoutingService, NotificationService) do not need any change.
             var baseAddress = new Uri("http://localhost:8734/Design_Time_Addresses/ProxyCacheService/Service1/");
 
-            // Cream binding-ul în cod, copiat după BigBasic din App.config
+            // Create the basicHttpBinding in code.
+            // Settings are equivalent to the "BigBasic" binding from the original App.config.
             var binding = new BasicHttpBinding
             {
                 Name = "BigBasic",
@@ -34,29 +40,33 @@ namespace ProxyCacheService.SelfHost
                 }
             };
 
+            // Create the ServiceHost that will host ProxyService at the given base address.
             using (var host = new ServiceHost(typeof(ProxyService), baseAddress))
             {
                 try
                 {
-                    // Endpoint principal SOAP
+                    // Main SOAP endpoint exposing IProxyService on the base address.
                     host.AddServiceEndpoint(
                         typeof(IProxyService),
                         binding,
-                        "" // address relativ = "", deci e fix baseAddress-ul de mai sus
+                        "" // empty relative address; exactly the baseAddress
                     );
 
-                    // MEX — pentru WCF Test Client, debugging
+                    // Add metadata behavior so that the service exposes a WSDL (MEX endpoint).
                     var smb = new ServiceMetadataBehavior
                     {
                         HttpGetEnabled = true
                     };
                     host.Description.Behaviors.Add(smb);
+
+                    // MEX endpoint used by tools such as WCF Test Client.
                     host.AddServiceEndpoint(
                         ServiceMetadataBehavior.MexContractName,
                         MetadataExchangeBindings.CreateMexHttpBinding(),
                         "mex"
                     );
 
+                    // Open the ServiceHost to start listening for messages.
                     host.Open();
 
                     Console.WriteLine("ProxyCacheService self-hosted at:");
@@ -68,10 +78,13 @@ namespace ProxyCacheService.SelfHost
                     Console.WriteLine("Press ENTER to stop ProxyCacheService...");
                     Console.ReadLine();
 
+                    // Close the ServiceHost.
                     host.Close();
                 }
                 catch (Exception ex)
                 {
+                    // If anything goes wrong during startup or runtime, show the full exception
+                    // so that debugging is easier when running the .exe directly.
                     Console.WriteLine("Error starting ProxyCacheService:");
                     Console.WriteLine(ex);
                     Console.WriteLine("Press ENTER to exit.");

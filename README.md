@@ -142,30 +142,30 @@ High-level architecture:
                             |   ProxyCacheService    |
                             |   (SOAP, WCF, cache)   |
                             +-----------+------------+
+                                        ^
+                                        |  (SOAP client call)
                                         |
-                             HTTP (JCDecaux, ORS)
-                                        |
-Browser (Leaflet + STOMP)               |
+Browser (Leaflet + STOMP)               |           
    |                                    |
-   | REST + WebSocket           +-------v------+
-   +---------------------------> | Routing     |
-                                 | ServiceREST |
-Java Map Viewer                  |  (REST)    |
-(ProxyCacheJavaClient)          +-------+------+
-          |                             |
-          | SOAP                        |
-          +-----------------------------+
+   | REST + WebSocket           +-------v-------+
+   +---------------------------> |  Routing     |
+                                 | ServiceREST  |
+Java Map Viewer                  | (REST server |
+(ProxyCacheJavaClient)           |  + SOAP client)
+   |                             +-------+-------+
+   | SOAP                                |
+   +-------------------------------------+
                                         |
-                                +-------v------+
-                                | ActiveMQ     |
-                                | (topics)     |
-                                +-------+------+
+                                +-------v-------+
+                                |   ActiveMQ    |
+                                |   (topics)    |
+                                +-------+-------+
                                         ^
                                         |
-                                +-------v------+
-                                | Notification |
-                                |  Service     |
-                                +--------------+
+                                +-------v-------+
+                                | Notification  |
+                                |   Service     |
+                                +---------------+
 ```
 
 * All external HTTP requests (JCDecaux, ORS) go through **ProxyCacheService**.
@@ -341,7 +341,16 @@ stop_all.bat
 
 ## RoutingServiceREST
 
-The routing service is implemented as a WCF REST service exposing one main method and a few helper endpoints. It focuses on **multimodal planning (walk + bike)** using JCDecaux bike networks and ORS routing.
+One important aspect of the design is that **RoutingServiceREST acts in two roles** at the same time:
+
+1. **REST server** — it exposes the `/itinerary` endpoint consumed by the web front-end and by the Java map viewer.  
+2. **SOAP client** — it calls `ProxyCacheService` (via the generated `ProxyRef.ProxyServiceClient`) to obtain JCDecaux contracts, station data, and cached HTTP responses.
+
+The RoutingServiceREST project implements the routing logic as a WCF REST service.  
+It exposes the `/itinerary` endpoint, which computes the multimodal (walk + bike) route using JCDecaux station data (via the ProxyCacheService) and ORS routing.  
+
+Because of **this dual nature**, the SelfHost version of the service defines all REST hosting logic in `Program.cs`, while its `App.config` contains only the SOAP client configuration (basicHttpBinding + endpoint). This keeps responsibilities clean and avoids mixing server and client concerns.
+
 
 ### Main Endpoint: `POST /itinerary`
 
@@ -814,6 +823,9 @@ This proves that TTL and generic caching are working as intended.
 ## Real-Time Notifications (NotificationService + ActiveMQ)
 
 This feature simulates external real-time events (weather, pollution, bike availability) and displays them on the map during an itinerary.
+
+`NotificationService` acts purely as a SOAP client: it does not host any WCF service, but simply calls `ProxyCacheService` using the binding defined in its App.config.  
+The `ALERT_CONTRACT` setting determines which JCDecaux city is monitored when generating bike events for ActiveMQ.
 
 ### Components
 
