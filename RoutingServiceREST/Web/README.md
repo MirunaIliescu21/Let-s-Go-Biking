@@ -989,8 +989,20 @@ Placa del Doctor Torrens, Valencia, Spain -> Centro de Especialidades El Grao, V
 
 Madrid -> Lyon ferry
 
+Brindas, France -> Bellecour, Lyon
 
+Aldi, Dublin -> Trinity College Dublin, Dublin
 
+Grand Place, Brussels -> Parc du Cinquantenaire, Brussels
+
+Toulouse -> Paris
+Paris -> Toulouse
+
+**Muret -> Paris ** !!!!! - ar merge cu travesrsarea lyonului cu bicicleta dar nu momentan implentat
+
+Muret -> Lyon GOOD
+
+Brindas, France -> Lyon Bellecour
 
 
 ### **Routing limitations of the GET Directions API**
