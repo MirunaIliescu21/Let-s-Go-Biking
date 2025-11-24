@@ -4,6 +4,22 @@ using Newtonsoft.Json;
 
 namespace RoutingServiceREST.Services
 {
+    /// <summary>
+    /// Provides geocoding through the OpenRouteService API, using the SOAP ProxyCacheService
+    /// for all HTTP requests and for transparent caching of results.
+    ///
+    /// Key responsibilities:
+    /// Converts free-text locations (e.g., "Lyon", "Place Bellecour") into coordinates.
+    /// Applies query heuristics: detects probable city queries and adjusts ORS parameters
+    ///   (country restriction, locality-only search) to avoid ambiguous or incorrect matches.
+    /// Builds ORS geocoding URLs and delegates execution to the ProxyServiceClient,
+    ///   benefiting from a 24h TTL cache to reduce API traffic.
+    /// Validates responses and safely handles non-JSON results (HTML error pages, rate limits).
+    /// Extracts the first GeoJSON feature returned by ORS and maps it to a Lat/Lon pair.
+    ///
+    /// This service isolates the routing core from ORS HTTP details and ensures robust,
+    /// consistent, and cached geocoding across the entire routing pipeline.
+    /// </summary>
     public sealed class OrsGeocodingService : IGeocodingService
     {
         private readonly IProxyFactory _factory;
@@ -41,7 +57,6 @@ namespace RoutingServiceREST.Services
             if (lower.Contains("luxembourg"))
                 return "LU";
 
-            // poți adăuga aici și alte țări/orașe relevante dacă vrei
             return null;
         }
 
@@ -65,9 +80,6 @@ namespace RoutingServiceREST.Services
                 string url = $"{baseUrl}?text={Uri.EscapeDataString(text)}&size=1" +
                                  countryParam +
                                  (cityMode ? "&layers=locality,localadmin,county,region,macroregion" : "");
-
-                //string url = $"{baseUrl}?text={Uri.EscapeDataString(text)}&size=1" +
-                //(cityMode ? "&layers=locality,localadmin,county,region,macroregion" : "");
 
                 string json = proxy.GetWithTtl(url, TTL_GEOCODE_SECONDS, false, false);
                 var trimmed = json?.TrimStart() ?? "";

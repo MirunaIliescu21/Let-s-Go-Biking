@@ -20,7 +20,7 @@ This README describes:
 - how the **routing logic** works in detail (multi-city, both-ends bike, thresholds),
 - how the **proxy cache** behaves (TTL, HIT/MISS, error handling),
 - how **real-time notifications** are integrated,
-- how the **heavy SOAP client** and **Java world map** are implemented. :contentReference[oaicite:0]{index=0}  
+- how the **heavy SOAP client** and **Java world map** are implemented.
 
 ---
 
@@ -439,6 +439,23 @@ Walk to station '2017 - LUX PARC EXPO'.
 Pick up a bike and ride to station 'SALON RNTP'.
 Drop the bike and walk to the destination.
 ```
+
+In this project, **JCDecaux networks** are associated to the origin and destination purely based on **geographic proximity**,
+not on the `cities` list declared in the official contracts.
+
+At runtime, the routing service loads **all JCDecaux stations from all contracts** and selects
+the nearest station to the origin coordinates, and the nearest station to the destination.
+
+The contracts of these two stations become the `OriginContract` and `DestContract`.
+
+This distance-based approach automatically supports *suburbs* and *nearby towns*:
+ - for example, when the user starts in *Muret*, the system will legitimately pick a station from
+   the **toulouse** contract because it is the closest JCDecaux network in terms of distance,
+   even if “Muret” is not explicitly listed as a city in that contract
+   * Start point: `Muret` 
+   * Origin contract: `toulouse`
+
+![Web Front-end itinerary Muret -> Lyon](images/itinerary-muret-lyon.png)
 
 #### 3. Inter-city multi-contract logic
 

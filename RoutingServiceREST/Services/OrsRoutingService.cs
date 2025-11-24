@@ -5,6 +5,15 @@ using Newtonsoft.Json;
 
 namespace RoutingServiceREST.Services
 {
+
+    /// <summary>
+    /// OrsRoutingService is a thin wrapper around the ORS Directions API.
+    /// It takes a profile, two coordinates, and returns a strongly typed
+    /// OrsRoute with duration, distance and decoded coordinates.
+    /// 
+    /// All HTTP calls are delegated to the SOAP proxy and cached for two minutes.
+    /// 
+    /// </summary>
     public sealed class OrsRoutingService : IRoutingCoreService
     {
         private readonly IProxyFactory _factory;

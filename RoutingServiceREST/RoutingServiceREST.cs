@@ -71,7 +71,7 @@ namespace RoutingServiceREST
                 if (nearestToOrigin == null || nearestToDest == null)
                     return Planning.WalkOnlyPlan.FromRouting(_routing, request, reason: "No nearby JCDecaux stations were found.");
 
-
+                // Build station context to pass all the needed information to the planner
                 var ctx = new Planning.StationContext
                 {
                     All = allStations,

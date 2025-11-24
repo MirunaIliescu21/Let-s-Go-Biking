@@ -9,12 +9,12 @@ namespace ProxyCacheService.Caching
 {
     /// <summary>
     /// Represents the textual content and metadata of a single HTTP GET request.
-    /// Used by the URL-based cache inside <see cref="ProxyService"/>.
+    /// Used by the URL-based cache inside "ProxyService".
     /// 
     /// This class encapsulates both successful and failed HTTP responses.
     /// For OpenRouteService (ORS) endpoints, it automatically adds the Bearer token
-    /// from <c>App.config</c>. For JCDecaux endpoints, it relies on the proxy layer
-    /// to append the <c>apiKey</c> query parameter.
+    /// from App.config. For JCDecaux endpoints, it relies on the proxy layer
+    /// to append the apiKey query parameter.
     /// </summary>
     public class HttpGetResource
     {

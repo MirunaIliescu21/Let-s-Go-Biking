@@ -27,8 +27,6 @@ namespace RoutingServiceREST.Services
             }
         }
 
-
-        // Bonus passthroughs to keep your public endpoints unchanged
         public List<JcDecauxContract> GetContracts()
         {
             using (var proxy = _factory.Create())
@@ -45,7 +43,6 @@ namespace RoutingServiceREST.Services
                 return contracts;
             }
         }
-
 
         public List<JcdecauxStation> GetStations(string contract)
         {
