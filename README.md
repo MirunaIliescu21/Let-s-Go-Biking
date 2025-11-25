@@ -1178,13 +1178,15 @@ Some representative journeys used to validate the system:
 
 * `Aldi, Dublin` → `Trinity College Dublin, Dublin`
 
-  * The planner selects the Dublin contract and uses nearby stations with available bikes and stands.
+  * The planner selects the `Dublin` contract and uses nearby stations with available bikes and stands.
 
-* `Grand Place, Brussels` → `Parc du Cinquantenaire, Brussels`
+* `Grand Place, Bruxelles` → `Parc du Cinquantenaire, Bruxelles`
 
-  * `bruxelles` contract; bikes should be used if they are close.
+  * The planner selects the `Bruxelles` contract and uses nearby stations with available bikes and stands.
 
 * `Rue de l'Ecuyer 19, Bruxelles` → `Galeries Royales Saint-Hubert, Bruxelles`.
+
+  * `walk-only` plan because is a short distance
 
 * `Placa del Doctor Torrens, Valencia, Spain` →
   `Centro de Especialidades El Grao, Valencia, Spain`
@@ -1212,7 +1214,7 @@ These test cases confirm:
 
 ## Final Notes
 
-This project goes **well beyond** the minimum requirements:
+This project goes **beyond** the minimum requirements:
 
 * full **multimodal routing** (walk + bike) with inter-city scenarios,
 
