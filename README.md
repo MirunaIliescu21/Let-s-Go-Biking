@@ -1,5 +1,7 @@
 # Let’s go Biking — Full Project Documentation
 
+####  by ILIESCU Miruna-Elena
+
 This repository implements the **“Let’s go Biking”** project:
 
 > Given an origin and a destination, compute an itinerary that uses **JCDecaux bikes** as much as possible when it is **faster than walking**, and display the result on a map.

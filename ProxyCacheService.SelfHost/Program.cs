@@ -46,11 +46,19 @@ namespace ProxyCacheService.SelfHost
                 try
                 {
                     // Main SOAP endpoint exposing IProxyService on the base address.
-                    host.AddServiceEndpoint(
+                    //host.AddServiceEndpoint(
+                    //    typeof(IProxyService),
+                    //    binding,
+                    //    "" // empty relative address; exactly the baseAddress
+                    //);
+                    var endpoint = host.AddServiceEndpoint(
                         typeof(IProxyService),
                         binding,
                         "" // empty relative address; exactly the baseAddress
                     );
+
+                    endpoint.Name = "BasicHttpBinding_IProxyService";
+
 
                     // Add metadata behavior so that the service exposes a WSDL (MEX endpoint).
                     var smb = new ServiceMetadataBehavior
