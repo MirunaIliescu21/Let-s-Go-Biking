@@ -86,7 +86,7 @@ namespace RoutingServiceREST
             [DataMember(Order = 6)] public double DistanceMeters { get; set; }
         }
 
-        // New type for route segments (multiple bikes possible)
+        // Type for route segments (multiple bikes possible)
         [DataContract]
         public class RouteSegment
         {

@@ -248,94 +248,118 @@ These run independently of Visual Studio.
 
 ---
 
-### URL ACL Registration (one-time setup)
+##  How to Run the Application (Self-Hosted)
 
-Windows does not allow services to bind to HTTP prefixes unless permitted.  
-Therefore, these commands were executed once in an elevated CMD:
+The backend consists of three independent C# services (REST, SOAP proxy/cache and notifications),
+plus an external **ActiveMQ broker** that must be running beforehand.
+Follow the steps below **in this exact order** to start the full system.
+
+---
+
+## One-time Windows configuration (URL ACL)
+
+*(Required only once on the machine — needed because WCF self-hosting binds to HTTP prefixes)*
+
+Run the following commands **in an elevated (Run as Administrator) CMD**:
 
 ```bat
 netsh http add urlacl url=http://+:8734/Design_Time_Addresses/ProxyCacheService/Service1/ user=ecomputer
 netsh http add urlacl url=http://+:8733/Design_Time_Addresses/RoutingServiceREST/Service1/ user=ecomputer
 ```
 
-This permanently authorizes the user `ecomputer` to run both servers.
+This permanently allows the user `ecomputer` to self-host both services on ports **8733** and **8734**.
+
+> 💡 *Alternatively, you may run the backend services as Administrator every time — but URLACL is cleaner and recommended.*
 
 ---
 
-### Automated Startup & Shutdown Scripts
+## 1. **Start ActiveMQ (required before starting the backend)**
 
-Three utility scripts were added at the solution root:
+ActiveMQ must be running because:
 
-#### `start_all.bat`
+* `NotificationService` connects to it to publish events
+* the frontend connects to it via STOMP WebSocket
+* without it, alerts will not work and the notification service will fail to start
 
-Starts:
+Assuming ActiveMQ was installed in `C:\apache-activemq\bin`:
 
-* ProxyCacheService (SOAP)
-* RoutingServiceREST (REST)
-* NotificationService (ActiveMQ alerts)
-
-Each opens in its own console window.
-
-#### `start_frontend.bat`
-
-Launches the front-end:
-
-* starts a lightweight Python HTTP server
-* automatically opens:
-
-```
-http://localhost:5500/index.html
+```bat
+cd C:\apache-activemq\bin
+activemq.bat start
 ```
 
-#### `stop_all.bat`
-
-Stops all backend processes using `taskkill`.
+You can verify it is running by opening:
+ **[http://localhost:8161](http://localhost:8161)**
 
 ---
 
-## How to Run the Application (Self-Hosted)
+## 2. **Start backend services**
 
-After URL ACL setup, running the full system is very simple:
+In the project root, run:
 
-### **1. Start backend services**
-
-```
+```bat
 start_all.bat
 ```
 
-### **2. Start the front-end**
+This starts, each in its own console window:
 
-```
+* **ProxyCacheService** (SOAP + caching)
+* **RoutingServiceREST** (REST itinerary API)
+* **NotificationService** (publishes weather/pollution/bike alerts to ActiveMQ)
+
+All three must remain open while testing the application.
+
+---
+
+## 3. **Start the frontend UI**
+
+Run:
+
+```bat
 start_frontend.bat
 ```
 
-Browser opens automatically at:
+This will:
 
-```
-http://localhost:5500/index.html
-```
+* start a lightweight local HTTP server (Python)
+* automatically open the web UI at:
 
-### **3. Use the application normally**
+**[http://localhost:5500/index.html](http://localhost:5500/index.html)**
 
-* pick origin/destination
-* view walking / bike plan
-* receive realtime notifications
-* compare with Java heavy client
-
-### **4. Stop all backend services**
-
-```
-stop_all.bat
-```
 ---
 
-## Summary
+## 4. **Use the application**
 
-* Clean separation between service logic and hosting logic
-* Visual Studio debugging stays fully intact
-* Executables allow independent runtime without VS
-* Scripts automate the entire workflow
-* Architecture mirrors real WCF deployment patterns
+At this point everything is running:
+
+* the REST router is available
+* the SOAP proxy/cache is active
+* ActiveMQ is broadcasting events
+* the frontend can compute itineraries and display alerts
+
+You can now:
+
+* enter any **Origin / Destination**
+* view **walking / bike multimodal routes**
+* press **Start Alerts** to receive meteo / pollution / bike events
+* optionally test the **Java heavy client** (SOAP + REST)
+
+---
+
+## 5. **Shutdown**
+
+To stop all backend services safely, run:
+
+```bat
+stop_all.bat
+```
+
+To stop ActiveMQ:
+
+```bat
+cd C:\apache-activemq\bin
+activemq.bat stop
+```
 
 ---
 

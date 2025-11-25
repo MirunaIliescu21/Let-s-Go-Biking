@@ -4,6 +4,19 @@ using RoutingServiceREST.Services;
 
 namespace RoutingServiceREST.Planning
 {
+    /// <summary>
+    /// Builds a fully-structured ItineraryResponse from routing segments.
+    /// This class is responsible for:
+    /// computing the walk-only baseline,
+    /// assembling walk/bike/walk multimodal paths,
+    /// generating clear human-readable instructions,
+    /// populating the Segments[] list with all geometry and timing data,
+    /// filling legacy coord fields for frontend compatibility.
+    /// 
+    /// All concrete plan types (OriginOnly, DestinationOnly, BothEnds)
+    /// use ResponseBuilders to generate a consistent API response.
+    /// </summary>
+
     public static class ResponseBuilders
     {
         public static ItineraryResponse OriginOnly(ItineraryRequest req, string originContract,
